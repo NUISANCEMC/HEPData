@@ -6,7 +6,7 @@
 
 # HepData Records
 
-## Tables [hepdata-tables]
+## Tables
 
 ### Dependent and Independent Variables
 
@@ -40,6 +40,6 @@
 
 The vast majority of published neutrino-scattering data is flux-averaged or flux-integrated, which implies that a specific neutrino energy spectrum (or spectra for data with multiple neutrino species) should be used when generating predictions of the data from simulation. 
 
-* Each [Table](#hepdata-tables) must Reference a specific flux prediction
+* Each [Table](#tables) must [Reference](#record-references) a specific flux prediction
 
 ### Neutrino Energy Cuts
