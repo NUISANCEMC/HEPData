@@ -1,9 +1,45 @@
-# NUISANCE-HEPData
+# NUISANCE HepData Conventions
 
-The NUISANCE-HEPData specification describes additional features of HEPData records that NUISANCE assumes to be able to automatically compare
+## Version 1.0
 
-## Unique ID
+1. 
 
-## Qualifiers
+# HepData Records
 
-## Snippets
+## Tables {#hepdata-tables}
+
+### Dependent and Independent Variables
+
+### Qualifiers
+
+## Additional Resources
+
+## Record References
+
+### Intra-record
+
+### Inter-record
+
+### INSPIRE
+
+# Publications
+
+## Datasets
+
+### Selections
+
+### Projections
+
+#### Units
+
+### Multi-dimensional Data
+
+### Errors
+
+## Flux Predictions
+
+The vast majority of published neutrino-scattering data is flux-averaged or flux-integrated, which implies that a specific neutrino energy spectrum (or spectra for data with multiple neutrino species) should be used when generating predictions of the data from simulation. 
+
+* Each [Table](#hepdata-tables) must Reference a specific flux prediction
+
+### Neutrino Energy Cuts
