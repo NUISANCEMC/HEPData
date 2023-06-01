@@ -6,7 +6,7 @@
 
 # HepData Records
 
-## Tables {#hepdata-tables}
+## Tables [hepdata-tables]
 
 ### Dependent and Independent Variables
 
