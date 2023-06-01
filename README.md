@@ -6,24 +6,24 @@ This document aims to provide a set of conventions on top of the establish [HepD
 
 # Table of Content
 
-1. [HepData Records](#hepdata-records)
-  1. [Tables](#Tables)
-    1. [Dependent and Independent Variables](#dependent-and-independent-variables)
-      1. [Units](#units)
-    1. [Qualifiers](#qualifiers)
-  1. [Additional Resources](#additional-resources)
-  1. [Record References](#record-references)
-    1. [Intra-record](#intra-record)
-    1. [Inter-record](#inter-record)
-    1. [INSPIRE](#inspire)
-1. [Publications](#publications)
-  1. [Datasets](#datasets)
-    1. [Selections](#selections)
-    1. [Projections](#projections)
-    1. [Multi-dimensional Data](#multi-dimensional-data)
-    1. [Errors](#errors)
-  1. [Flux Predictions](#flux-predictions)
-    1. [Neutrino Energy Cuts](#neutrino-energy-cuts)
++ [HepData Records](#hepdata-records)
+  - [Tables](#Tables)
+    * [Dependent and Independent Variables](#dependent-and-independent-variables)
+    * [Units](#units)
+    * [Qualifiers](#qualifiers)
+  - [Additional Resources](#additional-resources)
+  - [Record References](#record-references)
+    * [Intra-record](#intra-record)
+    * [Inter-record](#inter-record)
+    * [INSPIRE](#inspire)
++ [Publications](#publications)
+  - [Datasets](#datasets)
+    * [Selections](#selections)
+    * [Projections](#projections)
+    * [Multi-dimensional Data](#multi-dimensional-data)
+    * [Errors](#errors)
+  - [Flux Predictions](#flux-predictions)
+    * [Neutrino Energy Cuts](#neutrino-energy-cuts)
 
 # HepData Records
 
@@ -31,7 +31,7 @@ This document aims to provide a set of conventions on top of the establish [HepD
 
 ### Dependent and Independent Variables
 
-#### Units
+### Units
 
 ### Qualifiers
 
