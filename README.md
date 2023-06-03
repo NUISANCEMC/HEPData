@@ -40,11 +40,11 @@ We want to implement the minimum set of specific cases that cover the majority o
 
 Below is an at-a-glance checklist for producing compliant HepData records for most measurements. See the rest of the document for details.
 
-[✅] For each Independent Variable in a table a Qualifier must exist with the same name as the variable and a value corresponding to the name of a projection function in a snippet file included as an additional resource. See [Projection and Selection Snippets](#projection-and-selection-snippets).
-[✅] Each table must include a least one `Flux` qualifier. See [Flux Predictions](#flux-predictions).
-[✅] Each table must include a least one `Target` qualifier.
-[✅] Each table corresponding to a cross section measurement should include one `CrossSectionUnits` qualifier. See [Cross Section Units](#cross-section-units)
-[✅] Measurements that include a covariance estimate must include a `Covariance` qualifier. See [Errors](#errors).
+* [✅] For each Independent Variable in a table a Qualifier must exist with the same name as the variable and a value corresponding to the name of a projection function in a snippet file included as an additional resource. See [Projection and Selection Snippets](#projection-and-selection-snippets).
+* [✅] Each table must include a least one `Flux` qualifier. See [Flux Predictions](#flux-predictions).
+* [✅] Each table must include a least one `Target` qualifier.
+* [✅] Each table corresponding to a cross section measurement should include one `CrossSectionUnits` qualifier. See [Cross Section Units](#cross-section-units)
+* [✅] Measurements that include a covariance estimate must include a `Covariance` qualifier. See [Errors](#errors).
 
 # HepData Records
 
