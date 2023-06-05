@@ -1,9 +1,8 @@
 # NUISANCE HepData Conventions
 
-This document corresponds to version 0.1 of the NUISNACE HepData Conventions.
+This document corresponds to version 0.1 of the [NUISANCE](https://github.com/NUISANCEMC/nuisance) HepData Conventions.
 
-This document aims to provide a set of conventions on top of the establish [HepData format specification](http://hepdata-submission.readthedocs.io) that allow NUISANCE to automatically construct predictions for datasets from simulated vectors of neutrino interactions.
-These conventions should not limit the type of measurements that can be expressed and are meant to cover the majority of ...
+This document aims to provide a set of conventions on top of the established [HepData format specification](http://hepdata-submission.readthedocs.io) that allow NUISANCE to automatically construct predictions for datasets from simulated vectors of neutrino interactions. These conventions should not limit the type of measurements that can be expressed and are meant to cover the majority of existing published data. 
 
 We want to implement the minimum set of specific cases that cover the majority of existing and envisioned measurement types, without the expectation that every single measurement will fit in one of our pre-defined types. For other types of measurements, many of the conventions in this document can still be followed to enable a succinct custom NUISANCE implementation through extending one of these types or compositing existing utilities. See [What To Do If My Measurement Doesn't Fit?](#what-to-do-if-my-measurement-doesn-t-fit).
 
@@ -70,7 +69,8 @@ The current list of implemented Types are detailed below, any table that declare
 * `SingleRatio`
   - Ratios must be treated specially as two predictions must be fully made before taking the ratio, they cannot be built up in a purely simulated-event-by-simulated-event way.
 * `TotalCrossSection`
-  - Some historic measurements attempt to unfold the neutrino flux shape and neutrino energy reconstruction effects from observations to make direct measurement of the total scattering cross section as a function of neutrino energy. While it is now clear that this approach is fraguht with simulation-dependence error mis-estimation problems, there are a number of data sets that are important to preserve.
+  - Some historic measurements attempt to unfold the neutrino flux shape and neutrino energy reconstruction effects from observations to make direct measurement of the total scattering cross section as a function of neutrino energy. While it is now clear that this approach is fraguht with simulation-dependence error mis-estimation problems, there are a number of data sets that are important to preserve. 
+  - Predictions are made by selecting and projecting simualted neutrino interactions as a function of true neutrino energy, before accounting for the simulated flux integral in each energy bin. Since these require explicit cuts on the true neutrino energy additional snippet files also need to be provided.
 
 This list may be extended in future versions.
 
@@ -94,8 +94,8 @@ Measurements may have one or more dependent variable which describe the measured
 
 _PS: Agree with the latter too, but should avoid many qualifiers needing to be added. I really like your suggestion below of PerTarget|pb|PerBinWidth. I am unsure whether the bin scalings should be here or elsewhere?_
 _PS: Are we assuming each PerTarget as just a factor? Do we need to include this as a qualifier too? E.g. NNucleons=16_
+_LP: I think that we need a target specifier that we can parse to NNucleons. However, I think that we will also specify this on the 'other' end at input reading time and make NUISANCE's internal scaling PerTarget. Its just a lot more sensible all around (to me)._
 
-Include a qualifier like: `CrossSectionUnits=<>[|<>]`
 #### Cross Section Units
 
 For the majority of published data, as described in [Types](#types), the measurement will take the form of a scattering cross section. There are a number of historic conventions for the units and additional target material scale factors used in published cross section measurements. To avoid clumsy generic units metadata parsing, the explicit units should be also declared in a fixed form in a `CrossSectionUnits` [Qualifier](#qualifier).
@@ -116,56 +116,19 @@ For the majority of published data, as described in [Types](#types), the measure
   - `nb`
     + 1 pb = 1E-33 cm2
   - `cm2`
-    + A common unit for cross-section measurements that requires us to carry around a power-of-ten scale factor that is dangerously close to the minimum value representable by single precision IEEE 754 floating point numbers.
+    + A common unit for cross-section measurements that requires us to carry around a power-of-ten scale factor that is dangerously close to the [minimum value](https://en.wikipedia.org/wiki/Single-precision_floating-point_format) representable by single precision IEEE 754 floating point numbers.
   - `1E-38cm2`
     + Tries to avoid the 1E-38 factor by including it in the unit definition.
 
-<<<<<<< HEAD
-* Bin scalings, one of:
+_LP: Do we want this to be explicit? It collides somewhat with the Measurement Type. A proper diffxsec will always divide by bin hyper-volume and an event rate should be shape-only._
+
+* Bin scalings, at most one of:
   - `PerBinWidth` 
     + Explicitly divide the bin entries by bin width when calculating the cross-section.
   - `ShapeOnly`
     + Explicitly scale bin entries by its integral to produce a shape-only prediction when producing an MC histogram.
 
-These conventions very strongly recommend cross sections be published PerTarget and in pico barns, _i.e._ `CrossSectionUnits=PerTarget|pb`. We strongly recommend explicitly including this qualifier, if one does not exist, the default recommendation will be assumed.
-
-### Types
-
-While many important features of a measurement can be guessed from the data contained within a table, it is useful to define a set of Types that can be used by NUISANCE as _hints_ as to how to construct a prediction of a measurement and make comparisons to the data. For a fully compliant NUISANCE HepData Table one `BinningType` Qualfier must exist and an optional `MeasurementType` Qualifer may optionally exist. If no `MeasurementType` is specified, then NUISANCE will default to treating the measurement as a `FluxAveragedDifferentialCrossSection` Type.
-
-We want to implement the minimum set of specific cases that cover the majority of existing and envisioned measurement types, without the expectation that every single measurement will fit in one of our pre-defined types. For other types of measurements, many of the conventions in this document can still be followed to enable a succinct custom NUISANCE implementation through extending one of these types or compositing existing utilities.
-
-The current list of implemented Types are detailed below, any table that declares and implements one of these Types should be automatically consumeable by NUISANCE:
-
-#### BinningType
-
-* `1D` _PS: I think remove and put ContiguousND corresponds to THX_
-  - A one dimensional binned measurement with a single contiguous [Independent Variable](#independent-variables) axis. 
-  - This corresponds to a ROOT `TH1`.
-* `UniformND` _PS: I think remove and put ContiguousND corresponds to THX_
-  - A multi-dimensional binned measurement where the binning in any [Independent Variable](#independent-variables) does not change based on the value of another [Independent Variable](#independent-variables). 
-  - The corresponds to a ROOT `THX` for X = 1, 2, 3, N.
-* `ContiguousND`
-  - A multi-dimensional binned measurement where the binning in each [Independent Variable](#independent-variables) can generically change based on the value of any other [Independent Variable](#independent-variables).
-  - All bins in each [Independent Variable](#independent-variables) must be contiguous with two other bins except for two extremal 'end' bins which must be contiguous with only one bin each. This is equivalent to saying that there can be no internal gaps in the binning scheme.
-  - _N.B._ This also implies that bins must not overlap.
-* `NonContiguousND`
-  - A generic ND measurement where bins are referenced by a single integer identifier, or global bin number, and a binning function must be provided to map any given set of [Independent Variable](#independent-variables) unambiguously to a single bin.
-  - This is equivalent to binning by the _global_ bin number for a ROOT `THX`.
-
-#### MeasurementType
-
-* `FluxAveragedDifferentialCrossSection`
-  - The most common type of published neutrino-scattering measurement. A prediction is made by selecting and projecting simulated neutrino interactions from one or more neutrino species drawn from a neutrino energy spectra, or flux shape.
-* `EnergyExplicitCrossSection` _PS: Maybe this was TotalCrossSection_
-  - Measurements of neutrino scattering cross-sections where the binning is explicitly given in terms of unfolded neutrino energy. Predictions are made by selecting and projecting simualted neutrino interactions as a function of true neutrino energy, before accounting for the simulated flux integral in each energy bin. Since these require explicit cuts on the true neutrino energy additional snippet files also need to be provided.
-* `EventRate`
-  - Raw event rate data in which no explicit normalisation data has been provided. Predictions are made by selecting and projection neutrino interactions before scaling the final event rate production to match that of the data to make a shape-only comparison.  Typically this only applies to older bubble chamber experiment data.
-* `TotalCrossSection`
-* `SingleRatio`
-
-This list may be extended in future versions.
-
+These conventions very strongly recommend cross sections be published PerTarget and in pico barns, _i.e._ `CrossSectionUnits=PerTarget|pb|PerBinWidth`. We strongly recommend explicitly including this qualifier, if one does not exist, the default recommendation will be assumed.
 
 ### Formats
 
@@ -215,14 +178,16 @@ See [HepDataRefResolver.py](HepDataRefResolver.py) for utilities for resolving, 
 ### Errors
 
 _PS: For large matrices that are not invertible, do we want to suggest they check it can be inverted? Or provide an inverted one?_
+_LP: I think we can leave the option for a pre-inverted one._
 
-The [HepData `YAML`]() supports the inclusion of multiple uncertainties for each bin as well as the linking to associated covariance matrices for each table. In all cases the qualifiers for a table should provide a reference to the recommended covariance matrix to use when calculating a test statistic with the data. If multiple covariances are provided that need to be added together then all covariance can be included in the submission as seperate tables, however a total covariance should also be uploaded alongside this. For the avoidance of doubt a qualifier reference should be provided even if only one covariance is included in the submission : `Covariance=covariance_analysis1_total.dat`.
+The [HepData `YAML`]() supports the inclusion of multiple uncertainties for each bin as well as the linking to associated covariance matrices for each table. In all cases the qualifiers for a table should provide a reference to the recommended covariance matrix to use when calculating a test statistic with the data. If multiple covariances are provided that need to be added together then all covariance can be included in the submission as seperate tables, however a total covariance should also be uploaded alongside this. For the avoidance of doubt, a qualifier reference should be provided even if only one covariance is included in the submission : `Covariance=covariance_analysis1_total.dat`.
 
 Errors should be included wherever possible in [HepData `YAML`]() data tables even if there is an associated covariance. For event rate measurements where the known error is derived from Poisson statistics a calculated uncertainty should still be included.
 
 ### Test Statistics
 
 _PS: Might need a qualifier for recommended test statistics, particularly old MiniBoone where its shape-only + Norm, ANL where its poission errors, etc_
+
 If no test statistic qualifier is provided then the default statistic for any measurement when comparing it to a generator prediction is assumed to be a chi2 calculation of the form 
 $$\chi2 = (d_i - m_i) * M_{ij}^{-1} * (d_j - m_j),$$
  where $d_i$ is the data in the ith bin, $m_i$ is the prediction in the ith bin, and $M_{ij}$ is the invert of the associated dataset covariance matrix. 
@@ -244,8 +209,11 @@ The vast majority of published neutrino-scattering data is flux-averaged or flux
   * `<NS>` refers to the neutrino species in the explicit or implied beam mode and should be one of `numu`, `numubar`, `nue`, `nuebar`, `nutau`, `nutaubar`. This portion of the qualifier key may be omitted if only a single neutrino species is required to generate a prediction of the measurement.
 
 * If multiple flux tables are provided for a single table then it should be assumed that events should be generated for all tables and combined based on their relative magntiude. 
-* Where possible flux tables should be specified as the exact flux prediction used for the given measurement when the analysis took place.  _PS: On the fence about this...._
+* Where possible flux tables should be specified as the exact flux prediction used for the given measurement when the analysis took place.  _PS: On the fence about this..._
+_LP: I think we need to make this recommendation, T2K analyses that 'fit' the flux out for a given xsec measurement, we've seen that by not giving the post fit flux CV you can screw up comparisons by using the general flux prediction blindly. This might be a detail that we could include if we turn this into a tech paper._
 
 ### Neutrino Energy Cuts
 
 # What To Do If My Measurement Doesn't Fit?
+
+Weep profusely
