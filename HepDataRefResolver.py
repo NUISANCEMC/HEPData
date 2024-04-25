@@ -6,7 +6,7 @@ import os
 import sys
 
 def ResolveRequestIdentifiers(hepdata_reference):
-  reftype = "HepData"
+  reftype = "hepdata"
   recordid = None
   resourcename = None
   qualifier = None
@@ -53,25 +53,48 @@ def _resolve_resource(local_record_path, resourcename):
   else:
     return local_record_path
 
-def ResolveHepDataReference(root_dir, recordid, record_version=1, resourcename=None, qualifier=None, sandbox=False, *args, **kwargs):
+def _tryotherhepdata(reftype, recordid):
+  if reftype == "hepdata-sandbox":
+    sub_check_response = requests.get("https://www.hepdata.net/record/%s" % (recordid), params={"format": "json"})
+    if (sub_check_response.status_code == requests.codes.ok) and (sub_check_response.headers["content-type"] == "application/json"):
+      return "Sandbox HepData recordid=%s doesn't seem to exist, but there is a normal record with that id. Try hepdata:%s" % \
+          (recordid, recordid)
+
+  elif reftype == "hepdata":
+    sub_check_response = requests.get("https://www.hepdata.net/record/sandbox/%s" % (recordid), params={"format": "json"})
+
+    if (sub_check_response.status_code == requests.codes.ok) and (sub_check_response.headers["content-type"] == "application/json"):
+      return "Normal HepData recordid=%s doesn't seem to exist, but there is a sandbox record with that id. Try hepdata-sandbox:%s" % \
+        (recordid, recordid)
+  return None
+
+def ResolveHepDataReference(root_dir, recordid, record_version=1, resourcename=None, qualifier=None, *args, **kwargs):
   local_record_versioned_path = _build_local_HepData_Path(root_dir, recordid, record_version)
   local_resource_path = _resolve_resource(local_record_versioned_path, resourcename)
   if local_resource_path and os.path.exists(local_resource_path):
     return local_resource_path
 
-  # we don't have it and need to fetch is
+  # we don't have it and need to fetch it
 
-  if sandbox:
+  if kwargs["reftype"] == "hepdata-sandbox":
     record_URL = "https://www.hepdata.net/record/sandbox/%s" % (recordid)
-  else:
+  elif kwargs["reftype"] == "hepdata":
     record_URL = "https://www.hepdata.net/record/%s" % (recordid)
 
   sub_response = requests.get(record_URL, params={"format": "json"})
 
   if sub_response.status_code != requests.codes.ok:
-    raise RuntimeError("HTTP error response %s to GET: %s" % sub_response.url)
+    testother = _tryotherhepdata(kwargs["reftype"], recordid)
+    if testother:
+      raise RuntimeError(testother)
+
+    raise RuntimeError("HTTP error response %s to GET: %s" % (sub_response.status_code, sub_response.url))
 
   if sub_response.headers["content-type"] != "application/json":
+    testother = _tryotherhepdata(kwargs["reftype"], recordid)
+    if testother:
+      raise RuntimeError(testother)
+
     raise RuntimeError("Unexpected response to GET %s. Response content-type: %s. Does record %s exist?" % \
       (sub_response.url, sub_response.headers["content-type"], recordid) )
 
@@ -115,6 +138,20 @@ def ResolveHepDataReference(root_dir, recordid, record_version=1, resourcename=N
 
   raise RuntimeError("Expected resource %s to exist in %s" % (resourcename, local_record_versioned_path))
 
+def GetLocalPathToResource(outdir_root, reference, context={}):
+  reqids = ResolveRequestIdentifiers(reference)
+
+  if reqids["recordid"] == None:
+    if "recordid" in context:
+      reqids["recordid"] = context["recordid"]
+    else:
+      raise RuntimeError("No record id supplied in reference: \"%s\", but context also had no record id." % reference)
+
+  if (reqids["reftype"] == "hepdata-sandbox") or (reqids["reftype"] == "hepdata"):
+    return ResolveHepDataReference("%s/%s" % (outdir_root, reqids["reftype"]), **reqids)
+  else:
+    raise RuntimeError("Unresolvable reference type %s" % reqids["reftype"])
+
 if __name__ == "__main__":
 
   dbpath = os.environ.get("NUISANCE_HEPDATA_DATABASE")
@@ -125,14 +162,6 @@ if __name__ == "__main__":
   if not os.path.exists(dbpath):
     raise RuntimeError("NUISANCE_HEPDATA_DATABASE=%s points to a non-existant path" % dbpath)
 
-  reqids = ResolveRequestIdentifiers(sys.argv[1])
+  print(GetLocalPathToResource(dbpath, sys.argv[1]))
 
-  if reqids["reftype"] == "hepdata":
-    local_path = ResolveHepDataReference("%s/%s" % (dbpath, reqids["reftype"]), sandbox=False, **reqids)
-  elif reqids["reftype"] == "hepdata-sandbox":
-    local_path = ResolveHepDataReference("%s/%s" % (dbpath, reqids["reftype"]), sandbox=True, **reqids)
-  else:
-    print("Unknown ref type: %s" % reqids["reftype"])
-
-  print(local_path)
   
