@@ -147,12 +147,12 @@ This document may be updated in the future to cover other on-disk formats that N
 We define a format for record references as below, where `[]` denote optional components, `<>` denote the reference data itself, and `=` specifies a default value:
 
 ```
-[<type=HepData>:][<id>][/<resource[:<qualifier>]>]
+[<type=hepdata>:][<id>][/<resource[:<qualifier>]>]
 ```
 
 All parts of the reference are optional. In the absence of a reference `id`, the reference is considered an *intra*-record reference, referring to a resource contained within the same HepData record. In the absence of a `type`, the reference is considered an *inter*-record reference, referring to a resource contained within another HepData record. In the absence of a `resource` component, the reference is considered a generic link to another record and not a pointer to a specific resource of that record.
 
-The `type` of a reference is freeform, but outside of the special (and default) `HepData` type a generic referred resource will not be automatically retrievable. Common, useful types might include: `INSPIRE`, `zenodo`, `doi`, among others. To refer to a specific resource, such as a flux prediction or covariance matrix, the `resource` component should be used. The `qualifier` sub-component is resource specific and is included to enable referring to sub-resources. 
+The `type` of a reference is freeform, but outside of the special (and default) `hepdata` type a generic referred resource will not be automatically retrievable. Common, useful types might include: `INSPIRE`, `zenodo`, `doi`, among others. To refer to a specific resource, such as a flux prediction or covariance matrix, the `resource` component should be used. The `qualifier` sub-component is resource specific and is included to enable referring to sub-resources. 
 
 Some specific examples with explanations are given below:
 
@@ -160,6 +160,10 @@ Some specific examples with explanations are given below:
 * `12345/MyCrossSection:BackgroundPrediction`: This reference refers specifically to the `BackgroundPrediction` [Dependent Variable](#dependent-variable) in table `MyCrossSection` in HepData record `12345`.
 * `12345/additionaldata.yaml`: This reference refers to an [Additional Resource File](#additional-resources) named `additionaldata.yaml` in HepData record `12345`.
 * `12345/flux.root:flux_numu`: This reference refers to a specific object (in this case a histogram) named `flux_numu` in [Additional Resource File](#additional-resources) `flux.root` in HepData record `12345`.
+
+#### A Note on HepData sandboxed records
+
+Because the HepData REST API differentiates between public and sandboxed records, a separate type, `hepdata-sandbox`, must be defined to enable access to records that are in the sandbox. Public records should never link to sandboxed records, but sandboxed records may link to either other sandboxed records or public records.
 
 ### Reference utilities
 
