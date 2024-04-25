@@ -4,40 +4,49 @@ import requests
 from zipfile import ZipFile
 import os
 import sys
+import copy
 
-def ResolveRequestIdentifiers(hepdata_reference):
-  reftype = "hepdata"
-  recordid = None
-  resourcename = None
-  qualifier = None
+def ResolveRequestIdentifiers(hepdata_reference, **context):
 
-  if '/' in hepdata_reference:
-    record = hepdata_reference.split("/")[0]
+  reqids = {
+    "reftype": context.get("reftype"),
+    "recordid": str(context.get("recordid")),
+    "resourcename": context.get("resourcename"),
+    "qualifier": context.get("qualifier")
+  }
 
-    if ":" in record:
-      reftype = record.split(":")[0]
-      recordid = record.split(":")[1]
+  if hepdata_reference: # empty references can still be meaningful in context
+    if '/' in hepdata_reference:
+      record = hepdata_reference.split("/")[0]
+
+      if ":" in record:
+        reqids["reftype"] = record.split(":")[0]
+        reqids["recordid"] = record.split(":")[1]
+      else:
+        reqids["recordid"] = record
+
+      resource = hepdata_reference.split("/")[1]
+
+      if ":" in resource:
+        reqids["resourcename"] = resource.split(":")[0]
+        reqids["qualifier"] = resource.split(":")[1]
+      else:
+        reqids["resourcename"] = resource
+
+    elif ':' in hepdata_reference:
+      reqids["reftype"] = hepdata_reference.split(":")[0]
+      reqids["recordid"] = hepdata_reference.split(":")[1]
     else:
-      recordid = record
+      try:
+        recordid = int(hepdata_reference)
+        reqids["recordid"] = str(recordid)
+      except:
+        reqids["resourcename"] = hepdata_reference
 
-    resource = hepdata_reference.split("/")[1]
+  if not reqids["recordid"]:
+    raise RuntimeError("Didn't resolve a recordid for reference \"%s\", with context: %s" % (hepdata_reference, context))
 
-    if ":" in resource:
-      resourcename = resource.split(":")[0]
-      qualifier = resource.split(":")[1]
-    else:
-      resourcename = resource
-
-  elif ':' in hepdata_reference:
-    reftype = hepdata_reference.split(":")[0]
-    recordid = hepdata_reference.split(":")[1]
-  else:
-    recordid = hepdata_reference
-
-  return { "reftype": reftype,
-           "recordid": recordid,
-           "resourcename": resourcename,
-           "qualifier": qualifier }
+  return reqids
 
 def _build_local_HepData_Path(root_dir, recordid, record_version=1):
   return "/".join([root_dir, recordid, "HEPData-%s-v%s" % (recordid, record_version)])
@@ -99,8 +108,10 @@ def ResolveHepDataReference(root_dir, recordid, record_version=1, resourcename=N
       (sub_response.url, sub_response.headers["content-type"], recordid) )
 
   submission = sub_response.json()
-  
-  table_names = [ x["name"] for x in submission["data_tables"] ]
+
+  if not "version" in submission:
+    raise RuntimeError("Response json does not look like a submission object: %s" % submission)
+
   record_version = submission["version"]
 
   local_record_path = "%s/%s" % (root_dir, recordid)
@@ -138,14 +149,8 @@ def ResolveHepDataReference(root_dir, recordid, record_version=1, resourcename=N
 
   raise RuntimeError("Expected resource %s to exist in %s" % (resourcename, local_record_versioned_path))
 
-def GetLocalPathToResource(outdir_root, reference, context={}):
-  reqids = ResolveRequestIdentifiers(reference)
-
-  if reqids["recordid"] == None:
-    if "recordid" in context:
-      reqids["recordid"] = context["recordid"]
-    else:
-      raise RuntimeError("No record id supplied in reference: \"%s\", but context also had no record id." % reference)
+def GetLocalPathToResource(outdir_root, reference, *args, **context):
+  reqids = ResolveRequestIdentifiers(reference, **context)
 
   if (reqids["reftype"] == "hepdata-sandbox") or (reqids["reftype"] == "hepdata"):
     return ResolveHepDataReference("%s/%s" % (outdir_root, reqids["reftype"]), **reqids)
@@ -154,13 +159,13 @@ def GetLocalPathToResource(outdir_root, reference, context={}):
 
 if __name__ == "__main__":
 
-  dbpath = os.environ.get("NUISANCE_HEPDATA_DATABASE")
+  dbpath = os.environ.get("HEPDATA_RECORD_DATABASE")
 
   if not dbpath:
-    raise RuntimeError("NUISANCE_HEPDATA_DATABASE environment variable is not defined")
+    raise RuntimeError("HEPDATA_RECORD_DATABASE environment variable is not defined")
 
   if not os.path.exists(dbpath):
-    raise RuntimeError("NUISANCE_HEPDATA_DATABASE=%s points to a non-existant path" % dbpath)
+    raise RuntimeError("HEPDATA_RECORD_DATABASE=%s points to a non-existant path" % dbpath)
 
   print(GetLocalPathToResource(dbpath, sys.argv[1]))
 
