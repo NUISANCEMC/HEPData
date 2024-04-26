@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
 
-import requests
 from zipfile import ZipFile
 import os
 import sys
 import copy
+import logging
 
-def ResolveRequestIdentifiers(hepdata_reference, **context):
+import requests
 
-  reqids = {
+logger = logging.getLogger("HepDataRefResolver")
+
+def ResolveReferenceIdentifiers(hepdata_reference, **context):
+
+  logger.info("ResolveReferenceIdentifiers(%s,%s)" % (hepdata_reference, context))
+
+  refcomps = {
     "reftype": context.get("reftype"),
     "recordid": str(context.get("recordid")),
+    "recordvers": context.get("recordvers"),
     "resourcename": context.get("resourcename"),
     "qualifier": context.get("qualifier")
   }
@@ -20,40 +27,52 @@ def ResolveRequestIdentifiers(hepdata_reference, **context):
       record = hepdata_reference.split("/")[0]
 
       if ":" in record:
-        reqids["reftype"] = record.split(":")[0]
-        reqids["recordid"] = record.split(":")[1]
+        refcomps["reftype"] = record.split(":")[0]
+        refcomps["recordid"] = record.split(":")[1]
       else:
-        reqids["recordid"] = record
+        refcomps["recordid"] = record
 
       resource = hepdata_reference.split("/")[1]
 
       if ":" in resource:
-        reqids["resourcename"] = resource.split(":")[0]
-        reqids["qualifier"] = resource.split(":")[1]
+        refcomps["resourcename"] = resource.split(":")[0]
+        refcomps["qualifier"] = resource.split(":")[1]
       else:
-        reqids["resourcename"] = resource
+        refcomps["resourcename"] = resource
 
     elif ':' in hepdata_reference:
-      reqids["reftype"] = hepdata_reference.split(":")[0]
-      reqids["recordid"] = hepdata_reference.split(":")[1]
+      refcomps["reftype"] = hepdata_reference.split(":")[0]
+      refcomps["recordid"] = hepdata_reference.split(":")[1]
     else:
       try:
         recordid = int(hepdata_reference)
-        reqids["recordid"] = str(recordid)
+        refcomps["recordid"] = str(recordid)
       except:
-        reqids["resourcename"] = hepdata_reference
+        refcomps["resourcename"] = hepdata_reference
   elif isinstance(hepdata_reference, int):
-    reqids["recordid"] = hepdata_reference
+    refcomps["recordid"] = str(hepdata_reference)
 
-  if not reqids["recordid"]:
+  if 'v' in refcomps["recordid"]:
+    recordid = refcomps["recordid"].split("v")[0]
+    recordvers = refcomps["recordid"].split("v")[1]
+
+    refcomps["recordid"] = recordid
+    refcomps["recordvers"] = recordvers
+
+  if not refcomps["reftype"]:
+    raise RuntimeError("Didn't resolve a type for reference \"%s\", with context: %s" % (hepdata_reference, context))
+
+  if not refcomps["recordid"]:
     raise RuntimeError("Didn't resolve a recordid for reference \"%s\", with context: %s" % (hepdata_reference, context))
 
-  return reqids
+  logger.info("ResolveReferenceIdentifiers(%s,%s) -> %s" % (hepdata_reference, context, refcomps))
 
-def _build_local_HepData_Path(root_dir, recordid, record_version=1):
-  return "/".join([root_dir, recordid, "HEPData-%s-v%s" % (recordid, record_version)])
+  return refcomps
 
-def _resolve_resource(local_record_path, resourcename):
+def _build_local_HepData_path(root_dir, recordid, recordvers, **kwargs):
+  return "/".join([root_dir, recordid, "HEPData-%s-v%s" % (recordid, recordvers)])
+
+def _resolve_resource_yaml_path(local_record_path, resourcename, **kwargs):
   if resourcename:
     if os.path.exists("%s/%s" % (local_record_path,resourcename)):
       return "%s/%s" % (local_record_path,resourcename)
@@ -64,7 +83,7 @@ def _resolve_resource(local_record_path, resourcename):
   else:
     return local_record_path
 
-def _tryotherhepdata(reftype, recordid):
+def _tryotherhepdata(reftype, recordid, **kwargs):
   if reftype == "hepdata-sandbox":
     sub_check_response = requests.get("https://www.hepdata.net/record/%s" % (recordid), params={"format": "json"})
     if (sub_check_response.status_code == requests.codes.ok) and (sub_check_response.headers["content-type"] == "application/json"):
@@ -79,30 +98,40 @@ def _tryotherhepdata(reftype, recordid):
         (recordid, recordid)
   return None
 
-def ResolveHepDataReference(root_dir, recordid, record_version=1, resourcename=None, qualifier=None, *args, **kwargs):
-  local_record_versioned_path = _build_local_HepData_Path(root_dir, recordid, record_version)
-  local_resource_path = _resolve_resource(local_record_versioned_path, resourcename)
+def _tryversion1(reftype, recordid):
+  return None
+
+def ResolveHepDataReference(root_dir, **refcomps):
+
+  reftype = refcomps.get("reftype")
+  recordid = refcomps.get("recordid")
+  recordvers = refcomps.get("recordvers")
+  resourcename = refcomps.get("resourcename")
+  qualifier = refcomps.get("qualifier")
+
+  local_record_path = _build_local_HepData_path(root_dir, **refcomps)
+  local_resource_path = _resolve_resource_yaml_path(local_record_path, **refcomps)
   if local_resource_path and os.path.exists(local_resource_path):
-    return local_resource_path
+    return local_record_path, local_resource_path, refcomps
 
   # we don't have it and need to fetch it
 
-  if kwargs["reftype"] == "hepdata-sandbox":
+  if reftype == "hepdata-sandbox":
     record_URL = "https://www.hepdata.net/record/sandbox/%s" % (recordid)
-  elif kwargs["reftype"] == "hepdata":
+  elif reftype == "hepdata":
     record_URL = "https://www.hepdata.net/record/%s" % (recordid)
 
   sub_response = requests.get(record_URL, params={"format": "json"})
 
   if sub_response.status_code != requests.codes.ok:
-    testother = _tryotherhepdata(kwargs["reftype"], recordid)
+    testother = _tryotherhepdata(reftype, recordid)
     if testother:
       raise RuntimeError(testother)
 
     raise RuntimeError("HTTP error response %s to GET: %s" % (sub_response.status_code, sub_response.url))
 
   if sub_response.headers["content-type"] != "application/json":
-    testother = _tryotherhepdata(kwargs["reftype"], recordid)
+    testother = _tryotherhepdata(reftype, recordid)
     if testother:
       raise RuntimeError(testother)
 
@@ -114,18 +143,21 @@ def ResolveHepDataReference(root_dir, recordid, record_version=1, resourcename=N
   if not "version" in submission:
     raise RuntimeError("Response json does not look like a submission object: %s" % submission)
 
-  record_version = submission["version"]
+  if not recordvers:
+    recordvers = submission["version"]
+  elif int(recordvers) > int(submission["version"]):
+    raise RuntimeError("Requested version %s of record %s, but the record reported that the latest version is %s." % (recordvers, recordid, submission["version"]))
 
-  local_record_path = "%s/%s" % (root_dir, recordid)
-  if not os.path.exists(local_record_path):
-    # print("record database path: %s does not exist" % local_record_path)
-    os.makedirs(local_record_path)
+  local_record_root = "%s/%s" % (root_dir, recordid)
+  if not os.path.exists(local_record_root):
+    logger.info("Making local record directory: %s" % local_record_root)
+    os.makedirs(local_record_root)
 
-  local_record_versioned_path = _build_local_HepData_Path(root_dir, recordid, record_version)
+  local_record_path = _build_local_HepData_path(root_dir, recordid, recordvers)
 
-  zipsub_path = "%s.zip" % local_record_versioned_path
+  zipsub_path = "%s.zip" % local_record_path
   if not os.path.exists(zipsub_path):
-    submission_URL = "https://www.hepdata.net/download/submission/%s/%s/original" % (recordid, record_version)
+    submission_URL = "https://www.hepdata.net/download/submission/%s/%s/original" % (recordid, recordvers)
     submission_zip_response = requests.get(submission_URL)
     
     if submission_zip_response.status_code != requests.codes.ok:
@@ -140,35 +172,50 @@ def ResolveHepDataReference(root_dir, recordid, record_version=1, resourcename=N
 
   if os.path.exists(zipsub_path):
     with ZipFile(zipsub_path, 'r') as zippedsub:
-      zippedsub.extractall(local_record_versioned_path)
+      zippedsub.extractall(local_record_path)
     os.remove(zipsub_path)
   else:
-    raise RuntimeError("Expected %s to exist after downloading" % local_record_versioned_path)
+    raise RuntimeError("Expected %s to exist after downloading and extracting" % local_record_path)
 
-  local_resource_path = _resolve_resource(local_record_versioned_path, resourcename)
+  local_resource_path = _resolve_resource_yaml_path(local_record_path, resourcename)
+
   if local_resource_path:
-    return local_resource_path
+    updated_context = {
+      "reftype": reftype,
+      "recordid": recordid,
+      "recordvers": recordvers,
+      "resourcename": resourcename,
+      "qualifier": qualifier
+    }
+    return local_record_path, local_resource_path, updated_context
 
-  raise RuntimeError("Expected resource %s to exist in %s" % (resourcename, local_record_versioned_path))
+  raise RuntimeError("Expected resource %s to exist in %s" % (resourcename, local_record_path))
 
 def GetLocalPathToResource(outdir_root, reference, *args, **context):
-  reqids = ResolveRequestIdentifiers(reference, **context)
+  refcomps = ResolveReferenceIdentifiers(reference, **context)
 
-  if (reqids["reftype"] == "hepdata-sandbox") or (reqids["reftype"] == "hepdata"):
-    return ResolveHepDataReference("%s/%s" % (outdir_root, reqids["reftype"]), **reqids)
+  reftype_root_dir = "/".join([outdir_root, refcomps["reftype"]])
+
+  if (refcomps["reftype"] == "hepdata-sandbox") or (refcomps["reftype"] == "hepdata"):
+    return ResolveHepDataReference(reftype_root_dir, **refcomps)
   else:
-    raise RuntimeError("Unresolvable reference type %s" % reqids["reftype"])
+    raise RuntimeError("Unresolvable reference type %s" % refcomps["reftype"])
 
 if __name__ == "__main__":
 
+  # logging.basicConfig(level=logging.INFO)
+
   dbpath = os.environ.get("HEPDATA_RECORD_DATABASE")
 
-  if not dbpath:
-    raise RuntimeError("HEPDATA_RECORD_DATABASE environment variable is not defined")
+  try:
+    if not dbpath:
+      raise RuntimeError("HEPDATA_RECORD_DATABASE environment variable is not defined")
 
-  if not os.path.exists(dbpath):
-    raise RuntimeError("HEPDATA_RECORD_DATABASE=%s points to a non-existant path" % dbpath)
+    if not os.path.exists(dbpath):
+      raise RuntimeError("HEPDATA_RECORD_DATABASE=%s points to a non-existant path" % dbpath)
 
-  print(GetLocalPathToResource(dbpath, sys.argv[1]))
+    print(GetLocalPathToResource(dbpath, sys.argv[1])[1])
+  except RuntimeError as err:
+    print(err)
 
   
