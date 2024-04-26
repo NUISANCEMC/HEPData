@@ -118,7 +118,7 @@ def ResolveHepDataReference(root_dir, recordid, record_version=1, resourcename=N
 
   local_record_path = "%s/%s" % (root_dir, recordid)
   if not os.path.exists(local_record_path):
-    print("record database path: %s does not exist" % local_record_path)
+    # print("record database path: %s does not exist" % local_record_path)
     os.makedirs(local_record_path)
 
   local_record_versioned_path = _build_local_HepData_Path(root_dir, recordid, record_version)
