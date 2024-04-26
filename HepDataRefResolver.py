@@ -15,7 +15,7 @@ def ResolveRequestIdentifiers(hepdata_reference, **context):
     "qualifier": context.get("qualifier")
   }
 
-  if hepdata_reference: # empty references can still be meaningful in context
+  if hepdata_reference and isinstance(hepdata_reference, str): # empty references can still be meaningful in context
     if '/' in hepdata_reference:
       record = hepdata_reference.split("/")[0]
 
@@ -42,6 +42,8 @@ def ResolveRequestIdentifiers(hepdata_reference, **context):
         reqids["recordid"] = str(recordid)
       except:
         reqids["resourcename"] = hepdata_reference
+  elif isinstance(hepdata_reference, int):
+    reqids["recordid"] = hepdata_reference
 
   if not reqids["recordid"]:
     raise RuntimeError("Didn't resolve a recordid for reference \"%s\", with context: %s" % (hepdata_reference, context))
