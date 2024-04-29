@@ -15,11 +15,11 @@ def ResolveReferenceIdentifiers(hepdata_reference, **context):
   logger.info("ResolveReferenceIdentifiers(%s,%s)" % (hepdata_reference, context))
 
   refcomps = {
-    "reftype": context.get("reftype",""),
+    "reftype": str(context.get("reftype","")),
     "recordid": str(context.get("recordid","")),
-    "recordvers": context.get("recordvers",""),
-    "resourcename": context.get("resourcename",""),
-    "qualifier": context.get("qualifier","")
+    "recordvers": str(context.get("recordvers","")),
+    "resourcename": str(context.get("resourcename","")),
+    "qualifier": str(context.get("qualifier",""))
   }
 
   if hepdata_reference and isinstance(hepdata_reference, str): # empty references can still be meaningful in context
