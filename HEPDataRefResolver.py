@@ -206,16 +206,13 @@ def ResolveINSPIREHEPReference(root_dir, **refcomps):
 
   raise RuntimeError(f"Expected resource {resourcename} to exist in {local_record_path}")
 
-
 def GetLocalPathToResource(outdir_root, reference, *args, **context):
   refcomps = ResolveReferenceIdentifiers(reference, **context)
 
-  reftype_root_dir = "/".join([outdir_root, refcomps["reftype"]])
-
   if (refcomps["reftype"] == "hepdata-sandbox") or (refcomps["reftype"] == "hepdata"):
-    return ResolveHepDataReference(reftype_root_dir, **refcomps)
+    return ResolveHepDataReference("/".join([outdir_root, refcomps["reftype"]]), **refcomps)
   elif refcomps["reftype"] == "inspirehep":
-    return ResolveINSPIREHEPReference(reftype_root_dir, **refcomps)
+    return ResolveINSPIREHEPReference(outdir_root, **refcomps)
   else:
     raise RuntimeError(f"Unresolvable reference type {refcomps['reftype']}")
 
