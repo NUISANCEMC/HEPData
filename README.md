@@ -1,15 +1,15 @@
-# NUISANCE HepData Conventions
+# NUISANCE HEPData Conventions
 
-This document corresponds to version 0.1 of the [NUISANCE](https://github.com/NUISANCEMC/nuisance) HepData Conventions.
+This document corresponds to version 0.1 of the [NUISANCE](https://github.com/NUISANCEMC/nuisance) HEPData Conventions.
 
-This document aims to provide a set of conventions on top of the established [HepData format specification](http://hepdata-submission.readthedocs.io) that allow NUISANCE to automatically construct predictions for datasets from simulated vectors of neutrino interactions. These conventions should not limit the type of measurements that can be expressed and are meant to cover the majority of existing published data. 
+This document aims to provide a set of conventions on top of the established [HEPData format specification](http://hepdata-submission.readthedocs.io) that allow NUISANCE to automatically construct predictions for datasets from simulated vectors of neutrino interactions. These conventions should not limit the type of measurements that can be expressed and are meant to cover the majority of existing published data. 
 
 We want to implement the minimum set of specific cases that cover the majority of existing and envisioned measurement types, without the expectation that every single measurement will fit in one of our pre-defined types. For other types of measurements, many of the conventions in this document can still be followed to enable a succinct custom NUISANCE implementation through extending one of these types or compositing existing utilities. See [What To Do If My Measurement Doesn't Fit?](#what-to-do-if-my-measurement-doesn-t-fit).
 
 # Table of Contents
 
 + [Checklist](#checklist)
-+ [HepData Records](#hepdata-records)
++ [HEPData Records](#hEPdata-records)
   - [Tables](#tables)
     * [Qualifiers](#qualifiers)
     * [Types](#types)
@@ -36,7 +36,7 @@ We want to implement the minimum set of specific cases that cover the majority o
 
 # Checklist
 
-Below is an at-a-glance checklist for producing compliant HepData records for most measurements. See the rest of the document for details.
+Below is an at-a-glance checklist for producing compliant HEPData records for most measurements. See the rest of the document for details.
 
 * [✅] For each Independent Variable in a table a Qualifier must exist with the same name as the variable and a value corresponding to the name of a projection function in a snippet file included as an additional resource. See [Projection and Selection Snippets](#projection-and-selection-snippets).
 * [✅] Each table must include a least one `Flux` qualifier. See [Flux Predictions](#flux-predictions).
@@ -44,21 +44,21 @@ Below is an at-a-glance checklist for producing compliant HepData records for mo
 * [✅] Each table corresponding to a cross section measurement should include one `CrossSectionUnits` qualifier. See [Cross Section Units](#cross-section-units)
 * [✅] Measurements that include a covariance estimate must include a `Covariance` qualifier. See [Errors](#errors).
 
-# HepData Records
+# HEPData Records
 
-The top level data structure for a HepData submission is called a Record. It can be referenced by a unique Id number. This document will not unneccessarily detail the HepData format as it is authoratatively documented elsewhere. Records are described by one or more `YAML` files and can contain additional files in a range of format as additional resources.
+The top level data structure for a HEPData submission is called a Record. It can be referenced by a unique Id number. This document will not unneccessarily detail the HEPData format as it is authoratatively documented elsewhere. Records are described by one or more `YAML` files and can contain additional files in a range of format as additional resources.
 
 ## Tables
 
-A HepData Table broadly corresponds to a set of axes (Independent Variables) and measurements or predictions over those axes (Dependent Variables).
+A HEPData Table broadly corresponds to a set of axes (Independent Variables) and measurements or predictions over those axes (Dependent Variables).
 
 ### Qualifiers
 
-HepData Qualifiers are Key-Value pairs attached to a table as metadata. These conventions describe a number of Qualifiers that may or must be present for a table to be compliant and automatically consumeable by NUISANCE.
+HEPData Qualifiers are Key-Value pairs attached to a table as metadata. These conventions describe a number of Qualifiers that may or must be present for a table to be compliant and automatically consumeable by NUISANCE.
 
 ### Types
 
-While many important features of a measurement can be guessed from the data and metadata contained within a table, it is useful to define a set of Types that can be used as _hints_ as to how to construct a prediction of a measurement and make comparisons to the data. For each HepData Table one `MeasurementType` Qualifer may optionally exist. If no `MeasurementType` is specified, then the measurement type will default to `FluxAveragedDifferentialCrossSection` Type, which covers the vast majority of published data.
+While many important features of a measurement can be guessed from the data and metadata contained within a table, it is useful to define a set of Types that can be used as _hints_ as to how to construct a prediction of a measurement and make comparisons to the data. For each HEPData Table one `MeasurementType` Qualifer may optionally exist. If no `MeasurementType` is specified, then the measurement type will default to `FluxAveragedDifferentialCrossSection` Type, which covers the vast majority of published data.
 
 The current list of implemented Types are detailed below, any table that declares and implements one of these Types should be automatically consumeable by NUISANCE:
 
@@ -82,11 +82,11 @@ Each independent variable must be accompanied by a [Qualifier](#qualifier) with 
 
 #### Binning
 
-The HepData table format allows for fully generic hyper-rectangular bins in any number of dimensions. This is generic enough for any measurement that the authors are aware of. If your measurement makes use of non-hyper-rectangular bins, see [What To Do If My Measurement Doesn't Fit?](#what-to-do-if-my-measurement-doesn-t-fit) for ideas.
+The HEPData table format allows for fully generic hyper-rectangular bins in any number of dimensions. This is generic enough for any measurement that the authors are aware of. If your measurement makes use of non-hyper-rectangular bins, see [What To Do If My Measurement Doesn't Fit?](#what-to-do-if-my-measurement-doesn-t-fit) for ideas.
 
 #### Units
 
-The units, where applicable, for each independent variable axis must be clearly defined in the appropriate HepData metadata. The units returned by the [Projection](#projections) functions described below must match the units declared on the independent variable axis, no units parsing or automatic conversion will be performed.
+The units, where applicable, for each independent variable axis must be clearly defined in the appropriate HEPData metadata. The units returned by the [Projection](#projections) functions described below must match the units declared on the independent variable axis, no units parsing or automatic conversion will be performed.
 
 ### Dependent Variables
 
@@ -132,7 +132,7 @@ These conventions very strongly recommend cross sections be published PerTarget 
 
 ### Formats
 
-Tables should generally be uploaded in the [HepData `YAML` data format](https://hepdata-submission.readthedocs.io/en/latest/data_yaml.html#yaml-data-file-example) as it allows unambiguous, fully generic N-dimensional rectangular binned and unbinned data. Using ROOT files containing `TH1` instances, as is common in HEP data releases, places additional constraints on the uniformity of multi-dimensional binnings that do not accomodate current and future measurements where more-optimized binning might be needed. However, given the ubiquity of ROOT histograms in existing data releases, they can be used, and HepData can often transparently convert them to YAML files.
+Tables should generally be uploaded in the [HEPData `YAML` data format](https://hEPdata-submission.readthedocs.io/en/latest/data_yaml.html#yaml-data-file-example) as it allows unambiguous, fully generic N-dimensional rectangular binned and unbinned data. Using ROOT files containing `TH1` instances, as is common in HEP data releases, places additional constraints on the uniformity of multi-dimensional binnings that do not accomodate current and future measurements where more-optimized binning might be needed. However, given the ubiquity of ROOT histograms in existing data releases, they can be used, and HEPData can often transparently convert them to YAML files.
 
 This document may be updated in the future to cover other on-disk formats that NUISANCE can handle, please get in touch if you would like to contribute or request a new data table format.
 
@@ -147,23 +147,23 @@ This document may be updated in the future to cover other on-disk formats that N
 We define a format for record references as below, where `[]` denote optional components, `<>` denote the reference data itself, and `=` specifies a default value:
 
 ```
-[<type=hepdata>:][<id>][/<resource[:<qualifier>]>]
+[<type=hEPdata>:][<id>][/<resource[:<qualifier>]>]
 ```
 
-All parts of the reference are optional. In the absence of a reference `id`, the reference is considered an *intra*-record reference, referring to a resource contained within the same HepData record. In the absence of a `type`, the reference is considered an *inter*-record reference, referring to a resource contained within another HepData record. In the absence of a `resource` component, the reference is considered a generic link to another record and not a pointer to a specific resource of that record.
+All parts of the reference are optional. In the absence of a reference `id`, the reference is considered an *intra*-record reference, referring to a resource contained within the same HEPData record. In the absence of a `type`, the reference is considered an *inter*-record reference, referring to a resource contained within another HEPData record. In the absence of a `resource` component, the reference is considered a generic link to another record and not a pointer to a specific resource of that record.
 
-The `type` of a reference is freeform, but outside of the special (and default) `hepdata` type a generic referred resource will not be automatically retrievable. Common, useful types might include: `INSPIRE`, `zenodo`, `doi`, among others. To refer to a specific resource, such as a flux prediction or covariance matrix, the `resource` component should be used. The `qualifier` sub-component is resource specific and is included to enable referring to sub-resources. 
+The `type` of a reference is freeform, but outside of the special (and default) `hEPdata` type a generic referred resource will not be automatically retrievable. Common, useful types might include: `INSPIRE`, `zenodo`, `doi`, among others. To refer to a specific resource, such as a flux prediction or covariance matrix, the `resource` component should be used. The `qualifier` sub-component is resource specific and is included to enable referring to sub-resources. 
 
 Some specific examples with explanations are given below:
 
-* `12345/MyCrossSection`: This reference refers to a table named `MyCrossSection` in HepData record `12345`.
-* `12345/MyCrossSection:BackgroundPrediction`: This reference refers specifically to the `BackgroundPrediction` [Dependent Variable](#dependent-variable) in table `MyCrossSection` in HepData record `12345`.
-* `12345/additionaldata.yaml`: This reference refers to an [Additional Resource File](#additional-resources) named `additionaldata.yaml` in HepData record `12345`.
-* `12345/flux.root:flux_numu`: This reference refers to a specific object (in this case a histogram) named `flux_numu` in [Additional Resource File](#additional-resources) `flux.root` in HepData record `12345`.
+* `12345/MyCrossSection`: This reference refers to a table named `MyCrossSection` in HEPData record `12345`.
+* `12345/MyCrossSection:BackgroundPrediction`: This reference refers specifically to the `BackgroundPrediction` [Dependent Variable](#dependent-variable) in table `MyCrossSection` in HEPData record `12345`.
+* `12345/additionaldata.yaml`: This reference refers to an [Additional Resource File](#additional-resources) named `additionaldata.yaml` in HEPData record `12345`.
+* `12345/flux.root:flux_numu`: This reference refers to a specific object (in this case a histogram) named `flux_numu` in [Additional Resource File](#additional-resources) `flux.root` in HEPData record `12345`.
 
-#### A Note on HepData sandboxed records
+#### A Note on HEPData sandboxed records
 
-Because the HepData REST API differentiates between public and sandboxed records, a separate type, `hepdata-sandbox`, must be defined to enable access to records that are in the sandbox. Public records should never link to sandboxed records, but sandboxed records may link to either other sandboxed records or public records.
+Because the HEPData REST API differentiates between public and sandboxed records, a separate type, `hEPdata-sandbox`, must be defined to enable access to records that are in the sandbox. Public records should never link to sandboxed records, but sandboxed records may link to either other sandboxed records or public records.
 
 ### Reference utilities
 
@@ -184,9 +184,9 @@ See [HepDataRefResolver.py](HepDataRefResolver.py) for utilities for resolving, 
 _PS: For large matrices that are not invertible, do we want to suggest they check it can be inverted? Or provide an inverted one?_
 _LP: I think we can leave the option for a pre-inverted one._
 
-The [HepData `YAML`]() supports the inclusion of multiple uncertainties for each bin as well as the linking to associated covariance matrices for each table. In all cases the qualifiers for a table should provide a reference to the recommended covariance matrix to use when calculating a test statistic with the data. If multiple covariances are provided that need to be added together then all covariance can be included in the submission as seperate tables, however a total covariance should also be uploaded alongside this. For the avoidance of doubt, a qualifier reference should be provided even if only one covariance is included in the submission : `Covariance=covariance_analysis1_total.dat`.
+The [HEPData `YAML`]() supports the inclusion of multiple uncertainties for each bin as well as the linking to associated covariance matrices for each table. In all cases the qualifiers for a table should provide a reference to the recommended covariance matrix to use when calculating a test statistic with the data. If multiple covariances are provided that need to be added together then all covariance can be included in the submission as seperate tables, however a total covariance should also be uploaded alongside this. For the avoidance of doubt, a qualifier reference should be provided even if only one covariance is included in the submission : `Covariance=covariance_analysis1_total.dat`.
 
-Errors should be included wherever possible in [HepData `YAML`]() data tables even if there is an associated covariance. For event rate measurements where the known error is derived from Poisson statistics a calculated uncertainty should still be included.
+Errors should be included wherever possible in [HEPData `YAML`]() data tables even if there is an associated covariance. For event rate measurements where the known error is derived from Poisson statistics a calculated uncertainty should still be included.
 
 ### Test Statistics
 
@@ -215,6 +215,11 @@ The vast majority of published neutrino-scattering data is flux-averaged or flux
 * If multiple flux tables are provided for a single table then it should be assumed that events should be generated for all tables and combined based on their relative magntiude. 
 * Where possible flux tables should be specified as the exact flux prediction used for the given measurement when the analysis took place.  _PS: On the fence about this..._
 _LP: I think we need to make this recommendation, T2K analyses that 'fit' the flux out for a given xsec measurement, we've seen that by not giving the post fit flux CV you can screw up comparisons by using the general flux prediction blindly. This might be a detail that we could include if we turn this into a tech paper._
+
+* Flux prediction tables should include a `bin_content_type` qualifier, that must have one of two values:
+
+  * `count`: The histogram is a normal histogram where the bin height corresponds to the sum of weights within the bin
+  * `count_per_bin_width`: The bin height for each bin corresponds to the sum of weights in that bin divided by the width of the bin (or some reference width, as when the height units look like: `events /50 MeV`).
 
 ### Neutrino Energy Cuts
 
