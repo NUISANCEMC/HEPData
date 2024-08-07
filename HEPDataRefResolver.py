@@ -189,7 +189,7 @@ def ResolveHepDataReference(root_dir, **refcomps):
   raise RuntimeError(f"Expected resource {resourcename} to exist in {local_record_path}")
 
 def _build_local_INSPIREHEP_path(root_dir, recordid, recordvers, **kwargs):
-  return "/".join([root_dir, "INSPIREHEP", recordid, f"submission-{recordid}"])
+  return "/".join([root_dir, "INSPIREHEP", recordid])
 
 def ResolveINSPIREHEPReference(root_dir, **refcomps):
 
