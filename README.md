@@ -9,7 +9,7 @@ We want to implement the minimum set of specific cases that cover the majority o
 # Table of Contents
 
 + [Checklist](#checklist)
-+ [HEPData Records](#hEPdata-records)
++ [HEPData Records](#hepdata-records)
   - [Tables](#tables)
     * [Qualifiers](#qualifiers)
     * [Types](#types)
@@ -38,7 +38,7 @@ We want to implement the minimum set of specific cases that cover the majority o
 
 Below is an at-a-glance checklist for producing compliant HEPData records for most measurements. See the rest of the document for details.
 
-* [✅] For each Independent Variable in a table a Qualifier must exist with the same name as the variable and a value corresponding to the name of a projection function in a snippet file included as an additional resource. See [Projection and Selection Snippets](#projection-and-selection-snippets).
+* [✅] For each Independent Variable in a table, a Qualifier *must* exist with the same name as the variable and a value corresponding to the name of a projection function in a snippet file included as an additional resource. See [Projection and Selection Snippets](#projection-and-selection-snippets).
 * [✅] Each table must include a least one `Flux` qualifier. See [Flux Predictions](#flux-predictions).
 * [✅] Each table must include a least one `Target` qualifier.
 * [✅] Each table corresponding to a cross section measurement should include one `CrossSectionUnits` qualifier. See [Cross Section Units](#cross-section-units)
@@ -46,7 +46,7 @@ Below is an at-a-glance checklist for producing compliant HEPData records for mo
 
 # HEPData Records
 
-The top level data structure for a HEPData submission is called a Record. It can be referenced by a unique Id number. This document will not unneccessarily detail the HEPData format as it is authoratatively documented elsewhere. Records are described by one or more `YAML` files and can contain additional files in a range of format as additional resources.
+The top level data structure for a HEPData submission is called a Record. It can be referenced by a unique Id number. This document will not unneccessarily detail the HEPData format as it is authoratatively documented elsewhere. Records are described by one or more `YAML` files and can also contain others files in a range of formats as _additional resources_.
 
 ## Tables
 
@@ -54,11 +54,52 @@ A HEPData Table broadly corresponds to a set of axes (Independent Variables) and
 
 ### Qualifiers
 
-HEPData Qualifiers are Key-Value pairs attached to a table as metadata. These conventions describe a number of Qualifiers that may or must be present for a table to be compliant and automatically consumeable by NUISANCE.
+HEPData Qualifiers are Key-Value pairs attached to a table as metadata. These conventions describe a number of Qualifiers that _may_ or *must* be present for a table to be compliant and automatically consumeable by NUISANCE.
+
+#### Quick Reference
+
+* Measurement Qualifiers
+
+| Qualifier Key       | Required | Example Value |
+| ------------------- | -------- | ------------- |
+| `variable_type`     | Yes      | `cross_section_measurement` |
+| `measurement_type`  | No       | `flux_avgeraged_differential_cross_section` |
+| `selectfunc`        | Yes      | `MicroBooNE_CC0Pi_2016_Selection_123456` |
+| `<var>:projectfunc` | Yes      | `MicroBooNE_CC0Pi_2016_DeltaPT_123456` |
+| `xsec_units`        | No       | `pb\|per_target_nucleon\|per_first_bin_width` |
+| `target`            | Yes      | `CH` |
+| `probe_spectra`     | Yes      | `numu<123456/MicroBooNE_CC0Pi_2016_flux_numu>` |
+| `test_statistic`    | No       | `chi2`  |
+| `error`             | No       | `123456/MicroBooNE_CC0Pi_2016_DeltaPT_covar`  |
+| `smearing`          | No       | `123456/MicroBooNE_CC0Pi_2016_DeltaPT_smearing`  |
+| `sub_measurements`  | No       | `MicroBooNE_CC0Pi_2016_DeltaPTx,MicroBooNE_CC0Pi_2016_DeltaPTy` |
+
+* Flux table qualifiers
+
+| Qualifier Key      | Required | Example Value |
+| ------------------ | -------- | ------------- |
+| `variable_type`    | Yes      | `probe_flux` |
+| `probe_particle`   | Yes      | `numu` |
+| `bin_content_type` | Yes      | `count_density` |
+
+* Error table qualifiers
+
+| Qualifier Key   | Required | Example Value |
+| --------------- | -------- | ------------- |
+| `variable_type` | Yes      | `error_table` |
+| `error_type`    | Yes      | `covariance` |
+
+* Smearing table qualifiers
+
+| Qualifier Key   | Required | Example Value |
+| --------------- | -------- | ------------- |
+| `variable_type` | Yes      | `smearing_table` |
+| `smearing_type` | Yes      | `smearing_matrix` |
+
 
 ### Types
 
-While many important features of a measurement can be guessed from the data and metadata contained within a table, it is useful to define a set of Types that can be used as _hints_ as to how to construct a prediction of a measurement and make comparisons to the data. For each HEPData Table one `MeasurementType` Qualifer may optionally exist. If no `MeasurementType` is specified, then the measurement type will default to `FluxAveragedDifferentialCrossSection` Type, which covers the vast majority of published data.
+While many important features of a measurement can be guessed from the data and metadata contained within a table, it is useful to define a set of Types that can be used as _hints_ when constructing a prediction of a measurement. For each HEPData Table, one `measurement_type` Qualifer *must* exist to signify that this table represents a measurement.
 
 The current list of implemented Types are detailed below, any table that declares and implements one of these Types should be automatically consumeable by NUISANCE:
 
@@ -163,7 +204,7 @@ Some specific examples with explanations are given below:
 
 #### A Note on HEPData sandboxed records
 
-Because the HEPData REST API differentiates between public and sandboxed records, a separate type, `hEPdata-sandbox`, must be defined to enable access to records that are in the sandbox. Public records should never link to sandboxed records, but sandboxed records may link to either other sandboxed records or public records.
+Because the HEPData REST API differentiates between public and sandboxed records, a separate type, `hepdata-sandbox`, must be defined to enable access to records that are in the sandbox. Public records should never link to sandboxed records, but sandboxed records may link to either other sandboxed records or public records.
 
 ### Reference utilities
 

@@ -60,10 +60,10 @@ def ResolveReferenceIdentifiers(hepdata_reference, **context):
     refcomps["recordvers"] = recordvers
 
   if not refcomps["reftype"]:
-    raise RuntimeError(f"Didn't resolve a type for reference \"{hepdata_reference}\", with context: {context}")
+    raise RuntimeError(str(f"Didn't resolve a type for reference \"{hepdata_reference}\", with context: {context}"))
 
   if not refcomps["recordid"]:
-    raise RuntimeError(f"Didn't resolve a recordid for reference \"{hepdata_reference}\", with context: {context}")
+    raise RuntimeError(str(f"Didn't resolve a recordid for reference \"{hepdata_reference}\", with context: {context}"))
 
   logger.info(f"ResolveReferenceIdentifiers({hepdata_reference},{context}) -> {refcomps}")
 
@@ -126,24 +126,24 @@ def ResolveHepDataReference(root_dir, **refcomps):
     if testother:
       raise RuntimeError(testother)
 
-    raise RuntimeError(f"HTTP error response {sub_response.status_code} to GET: {sub_response.url}")
+    raise RuntimeError(str(f"HTTP error response {sub_response.status_code} to GET: {sub_response.url}"))
 
   if sub_response.headers["content-type"] != "application/json":
     testother = _tryotherhepdata(reftype, recordid)
     if testother:
       raise RuntimeError(testother)
 
-    raise RuntimeError(f"Unexpected response to GET {sub_response.url}. Response content-type: {sub_response.headers['content-type']}. Does record {recordid} exist?")
+    raise RuntimeError(str(f"Unexpected response to GET {sub_response.url}. Response content-type: {sub_response.headers['content-type']}. Does record {recordid} exist?"))
 
   submission = sub_response.json()
 
   if not "version" in submission:
-    raise RuntimeError(f"Response json does not look like a submission object: {submission}")
+    raise RuntimeError(str(f"Response json does not look like a submission object: {submission}"))
 
   if not recordvers:
     recordvers = submission["version"]
   elif int(recordvers) > int(submission["version"]):
-    raise RuntimeError(f"Requested version {recordvers} of record {recordid}, but the record reported that the latest version is {submission['version']}.")
+    raise RuntimeError(str(f"Requested version {recordvers} of record {recordid}, but the record reported that the latest version is {submission['version']}."))
 
   local_record_root = f"{root_dir}/{recordid}"
   if not os.path.exists(local_record_root):
@@ -158,10 +158,10 @@ def ResolveHepDataReference(root_dir, **refcomps):
     submission_zip_response = requests.get(submission_URL)
     
     if submission_zip_response.status_code != requests.codes.ok:
-      raise RuntimeError(f"HTTP error response code {submission_zip_response.status_code} to GET: {submission_zip_response.url}")
+      raise RuntimeError(str(f"HTTP error response code {submission_zip_response.status_code} to GET: {submission_zip_response.url}"))
 
     if submission_zip_response.headers["content-type"] != "application/zip":
-      raise RuntimeError(f"Unexpected response to GET. Response content-type: {submission_zip_response.headers['content-type']}, expected application/zip")
+      raise RuntimeError(str(f"Unexpected response to GET. Response content-type: {submission_zip_response.headers['content-type']}, expected application/zip"))
 
     with open(zipsub_path, 'wb') as fd:
       for chunk in submission_zip_response.iter_content(chunk_size=128):
@@ -172,7 +172,7 @@ def ResolveHepDataReference(root_dir, **refcomps):
       zippedsub.extractall(local_record_path)
     os.remove(zipsub_path)
   else:
-    raise RuntimeError(f"Expected {local_record_path} to exist after downloading and extracting")
+    raise RuntimeError(str(f"Expected {local_record_path} to exist after downloading and extracting"))
 
   local_resource_path = _resolve_resource_yaml_path(local_record_path, resourcename)
 
@@ -186,7 +186,7 @@ def ResolveHepDataReference(root_dir, **refcomps):
     }
     return local_record_path, local_resource_path, updated_context
 
-  raise RuntimeError(f"Expected resource {resourcename} to exist in {local_record_path}")
+  raise RuntimeError(str(f"Expected resource {resourcename} to exist in {local_record_path}"))
 
 def _build_local_INSPIREHEP_path(root_dir, recordid, recordvers, **kwargs):
   return "/".join([root_dir, "INSPIREHEP", recordid])
@@ -204,8 +204,9 @@ def ResolveINSPIREHEPReference(root_dir, **refcomps):
   if local_resource_path and os.path.exists(local_resource_path):
     return local_record_path, local_resource_path, refcomps
 
-  raise RuntimeError(f"Expected resource {resourcename} to exist in {local_record_path}")
+  raise RuntimeError(str(f"Expected resource {resourcename} to exist in {local_record_path}"))
 
+# returns: (string: local_record_path, string: local_resource_path, dict: context)
 def GetLocalPathToResource(outdir_root, reference, *args, **context):
   refcomps = ResolveReferenceIdentifiers(reference, **context)
 
@@ -214,7 +215,7 @@ def GetLocalPathToResource(outdir_root, reference, *args, **context):
   elif refcomps["reftype"] == "inspirehep":
     return ResolveINSPIREHEPReference(outdir_root, **refcomps)
   else:
-    raise RuntimeError(f"Unresolvable reference type {refcomps['reftype']}")
+    raise RuntimeError(str(f"Unresolvable reference type {refcomps['reftype']}"))
 
 if __name__ == "__main__":
 
@@ -227,7 +228,7 @@ if __name__ == "__main__":
       raise RuntimeError("HEPDATA_RECORD_DATABASE environment variable is not defined")
 
     if not os.path.exists(dbpath):
-      raise RuntimeError("HEPDATA_RECORD_DATABASE=%s points to a non-existant path" % dbpath)
+      raise RuntimeError(str(f"HEPDATA_RECORD_DATABASE={dbpath} points to a non-existant path"))
 
     print(GetLocalPathToResource(dbpath, sys.argv[1])[1])
   except RuntimeError as err:
