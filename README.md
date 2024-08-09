@@ -19,7 +19,7 @@ We want to implement the minimum set of specific cases that cover the majority o
   - [Additional Resources](#additional-resources)
     * [Projection and Selection Snippets](#projection-and-selection-snippets)
     * [Data Release Conversion Scripts](#data-release-conversion-scripts)
-  - [Record References](#record-references)
+  - [Resource References](#resource-references)
     - [Intra-record](#intra-record)
     - [Inter-record](#inter-record)
     - [INSPIRE](#inspire)
@@ -38,56 +38,56 @@ We want to implement the minimum set of specific cases that cover the majority o
 
 Below is an at-a-glance checklist for producing compliant HEPData records for most measurements. See the rest of the document for details.
 
-* [✅] For each Independent Variable in a table, a Qualifier *must* exist with the same name as the variable and a value corresponding to the name of a projection function in a snippet file included as an additional resource. See [Projection and Selection Snippets](#projection-and-selection-snippets).
-* [✅] Each table must include a least one `Flux` qualifier. See [Flux Predictions](#flux-predictions).
-* [✅] Each table must include a least one `Target` qualifier.
-* [✅] Each table corresponding to a cross section measurement should include one `CrossSectionUnits` qualifier. See [Cross Section Units](#cross-section-units)
-* [✅] Measurements that include a covariance estimate must include a `Covariance` qualifier. See [Errors](#errors).
+* [✅] _Dependent Variables_ that correspond to a cross section measurement *must* have a _Qualifier_ with key `variable_type`. For most measurements, the most appropriate value is `cross_section_measurement`.
+* [✅] For each _Independent Variable_, named `var`, in a table, a _Qualifier_ with the key `var:projectfunc` *must* exist on each measurement _Dependent Variable_, and the value *must* be a valid [Resource Reference](#resource-references) to the name of a projection function in a snippet file. See [Projection and Selection Snippets](#projection-and-selection-snippets).
+* [✅] Each measurement _Dependent Variable_ *must* include a least one `probe_spectra` qualifier. See [Probe Spectra](#probe-spectra).
+* [✅] Each measurement _Dependent Variable_ *must* include a least one `target` qualifier. See [Target](#target)
+* [✅] Each measurement _Dependent Variable_ _should_ include one `cross_section_units` qualifier. See [Cross Section Units](#cross-section-units)
+* [✅] Measurements that include a covariance estimate *must* include an `errors` qualifier. The value *must* be a valid [Resource Reference](#resource-references) to an errors table. See [Errors](#errors).
+* [✅] Measurements presented in some smeared space *must* include a `smearing` qualifier. The value *must* be a valid [Resource Reference](#resource-references) to a smearing table. See [Smearing](#smearing).
 
 # HEPData Records
 
-The top level data structure for a HEPData submission is called a Record. It can be referenced by a unique Id number. This document will not unneccessarily detail the HEPData format as it is authoratatively documented elsewhere. Records are described by one or more `YAML` files and can also contain others files in a range of formats as _additional resources_.
+The top level data structure for a HEPData submission is called a Record. It can be referenced by a unique Id number. This document will not unneccessarily detail the HEPData format as it is authoratatively documented [elsewhere](http://hepdata-submission.readthedocs.io). Records are described by one or more `YAML` files and can also contain others files in a range of formats as _Additional Resources_.
 
-## Tables
+*Table*: A HEPData Table broadly corresponds to a set of binned or unbinned axis (_Independent Variables_) definitions and the corresponding values over those axes (_Dependent Variables_). _Dependent Variables_ are used to store measurements, predictions, error and smearing matrices.
 
-A HEPData Table broadly corresponds to a set of axes (Independent Variables) and measurements or predictions over those axes (Dependent Variables).
+*Qualifiers:* HEPData _Qualifiers_ are Key-Value pairs attached to _Dependent Variables_ as metadata. These conventions describe a number of _Qualifiers_ that _may_ or *must* be present for a table to be compliant and automatically consumeable by NUISANCE.
 
-### Qualifiers
-
-HEPData Qualifiers are Key-Value pairs attached to a table as metadata. These conventions describe a number of Qualifiers that _may_ or *must* be present for a table to be compliant and automatically consumeable by NUISANCE.
-
-#### Quick Reference
+## Qualifier Quick Reference
 
 * Measurement Qualifiers
 
-| Qualifier Key       | Required | Example Value |
-| ------------------- | -------- | ------------- |
-| `variable_type`     | Yes      | `cross_section_measurement` |
-| `measurement_type`  | No       | `flux_avgeraged_differential_cross_section` |
-| `selectfunc`        | Yes      | `MicroBooNE_CC0Pi_2016_Selection_123456` |
-| `<var>:projectfunc` | Yes      | `MicroBooNE_CC0Pi_2016_DeltaPT_123456` |
-| `xsec_units`        | No       | `pb\|per_target_nucleon\|per_first_bin_width` |
-| `target`            | Yes      | `CH` |
-| `probe_spectra`     | Yes      | `numu<123456/MicroBooNE_CC0Pi_2016_flux_numu>` |
-| `test_statistic`    | No       | `chi2`  |
-| `error`             | No       | `123456/MicroBooNE_CC0Pi_2016_DeltaPT_covar`  |
-| `smearing`          | No       | `123456/MicroBooNE_CC0Pi_2016_DeltaPT_smearing`  |
-| `sub_measurements`  | No       | `MicroBooNE_CC0Pi_2016_DeltaPTx,MicroBooNE_CC0Pi_2016_DeltaPTy` |
+| Qualifier Key         | Required | Example Value |
+| --------------------- | -------- | ------------- |
+| `variable_type`       | Yes      | `cross_section_measurement` |
+| `measurement_type`    | No       | `flux_avgeraged_differential_cross_section` |
+| `selectfunc`          | Yes      | `MicroBooNE_CC0Pi_2019_Selection_123456` |
+| `<var>:projectfunc`   | Yes      | `MicroBooNE_CC0Pi_2019_DeltaPT_123456`, `4321/analysis.cxx:MicroBooNE_CCInc_2017_PMu_4321` |
+| `cross_section_units` | No       | `pb\|per_target_nucleon\|per_first_bin_width` |
+| `target`              | Yes      | `CH`, `C[12],H[1]`, `1000180400` |
+| `target[1...]`        | No       | `CH`, `C[12],H[1]`, `1000180400` |
+| `probe_spectra`       | Yes      | `123456/MicroBooNE_CC0Pi_2019_flux_numu`, `flux_numu[1],flux_nue[0.9]` |
+| `probe_spectra[1...]` | No       | `123456/MicroBooNE_CC0Pi_2019_flux_numu`, `flux_numu[1],flux_nue[0.9]` |
+| `test_statistic`      | No       | `chi2`  |
+| `errors`              | No       | `123456/MicroBooNE_CC0Pi_2019_DeltaPT_covar`  |
+| `smearing`            | No       | `123456/MicroBooNE_CC0Pi_2019_DeltaPT_smearing`  |
+| `sub_measurements`    | No       | `MicroBooNE_CC0Pi_2019_DeltaPTx,MicroBooNE_CC0Pi_2019_DeltaPTy` |
 
 * Flux table qualifiers
 
 | Qualifier Key      | Required | Example Value |
 | ------------------ | -------- | ------------- |
 | `variable_type`    | Yes      | `probe_flux` |
-| `probe_particle`   | Yes      | `numu` |
-| `bin_content_type` | Yes      | `count_density` |
+| `probe_particle`   | Yes      | `numu`, `-14` |
+| `bin_content_type` | Yes      | `count`, `count_density` |
 
 * Error table qualifiers
 
 | Qualifier Key   | Required | Example Value |
 | --------------- | -------- | ------------- |
 | `variable_type` | Yes      | `error_table` |
-| `error_type`    | Yes      | `covariance` |
+| `error_type`    | Yes      | `covariance`, `correlation` |
 
 * Smearing table qualifiers
 
@@ -97,25 +97,32 @@ HEPData Qualifiers are Key-Value pairs attached to a table as metadata. These co
 | `smearing_type` | Yes      | `smearing_matrix` |
 
 
-### Types
+## 1. Variable Qualifier
 
-While many important features of a measurement can be guessed from the data and metadata contained within a table, it is useful to define a set of Types that can be used as _hints_ when constructing a prediction of a measurement. For each HEPData Table, one `measurement_type` Qualifer *must* exist to signify that this table represents a measurement.
+The `variable_type` qualifier is used to explicitly mark any _Dependent Variable_ that follows this convention. _Dependent Variables_ without the `variable_type` qualifier will generally be ignored by NUISANCE. Values other than those in the below table will generally cause a processing error.
 
-The current list of implemented Types are detailed below, any table that declares and implements one of these Types should be automatically consumeable by NUISANCE:
+| Value                       | Comments |
+| --------------------------- | -------- |
+| `cross_section_measurement` |  |
+| `probe_flux`                |  |
+| `error_table`               |  |
+| `smearing_table`            |  |
 
-* `FluxAveragedDifferentialCrossSection`
-  - The most common type of published neutrino-scattering measurement. A prediction is made by selecting and projecting simulated neutrino interactions from one or more neutrino species drawn from a neutrino energy spectra, or flux shape.
-* `EventRate`
-  - Some historic data are presented as simple event rates. For this case, only the shape of simulated predictions can be compared
-* `SingleRatio`
-  - Ratios must be treated specially as two predictions must be fully made before taking the ratio, they cannot be built up in a purely simulated-event-by-simulated-event way.
-* `TotalCrossSection`
-  - Some historic measurements attempt to unfold the neutrino flux shape and neutrino energy reconstruction effects from observations to make direct measurement of the total scattering cross section as a function of neutrino energy. While it is now clear that this approach is fraguht with simulation-dependence error mis-estimation problems, there are a number of data sets that are important to preserve. 
-  - Predictions are made by selecting and projecting simualted neutrino interactions as a function of true neutrino energy, before accounting for the simulated flux integral in each energy bin. Since these require explicit cuts on the true neutrino energy additional snippet files also need to be provided.
+## 2. Measurement Qualifiers
+
+### 2.1 Measurement Type
+
+While many important features of a measurement can be guessed from the data and metadata contained within a table, it is useful to define a set of types that can be used as _hints_ when constructing a prediction of a measurement. For each HEPData Table, one `measurement_type` Qualifer *must* exist to signify that this table represents a measurement.
+
+
+| Value                       | Comments |
+| --------------------------- | -------- |
+| `flux_averaged_differential_cross_section` | The most common type of published neutrino-scattering measurement. A prediction is made by selecting and projecting simulated neutrino interactions from one or more neutrino species drawn from a neutrino energy spectra, or flux shape. |
+| `event_rate`                | Some historic data are presented as simple event rates. For this case, only the shape of simulated predictions can be compared to the data. |
+| `ratio`               | Ratios must often be treated specially as, in general, multiple simulation runs are required to make a fully prediction using either different targets or different probe spectra, or both. |
+| `total_cross_section`            | Some historic measurements attempt to unfold the neutrino flux shape and neutrino energy reconstruction effects from observations to make direct measurements of the total scattering cross section as a function of neutrino energy. While this approach has fallen out of favor due to issues with model dependence, there are a number of data sets that are important to preserve. |
 
 This list may be extended in future versions.
-
-When a measurement has multiple tables qualifiers should be provided for ALL tables such that a single HEPDATA table provides a self-contained summary of all analysis criteria associated with that data.
 
 ### Independent Variables
 
