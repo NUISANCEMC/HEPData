@@ -275,9 +275,13 @@ The only _Qualifier_ currently specified for error matrices is `error_type`, and
 | `fractional_covariance` | A fractional covariance. The **fractional** error on the corresponding bin can be found by simply square rooting the value. |
 | `correlation` | A correlation matrix. If a correlation matrix is provided, it will usually be converted back to a covariance matrix by assuming the errors provided on the data tables correspond to the standard error on each bin. In this case, the error component `total`, will be used. If no `total` error component can be found on the corresponding table, this should be considered an error. |
 
+While Error tables should use the same format as data tables, the yaml file for the table can be included as an additional resource on the record or on the corresponding measurement table. The file size limits differ for tables and additional resources and covariance matrices of many-binned measurements can be quite large as an uncompressed yaml file.
+
 ## 6. Smearing
 
 Publishing non-true space measurements and smearing procedures is relatively rare, but is becoming more common thanks to the desireable statistical properties of techniques like Wiener SVD unfolding. The only valid _Qualifier_ for a smearing table is `smearing_type=smearing_matrix`. The _Independent Variable_ should be defined as in [Errors](#errors).
+
+While Smearing tables should use the same format as data tables, the yaml file for the table can be included as an additional resource on the record or on the corresponding measurement table. The file size limits differ for tables and additional resources and smearing matrices for many-binned measurements can be quite large as an uncompressed yaml file.
 
 ## Analysis Snippets
 

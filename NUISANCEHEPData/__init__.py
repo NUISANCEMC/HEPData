@@ -2,9 +2,9 @@ import yaml
 
 from .HEPDataRefResolver import *
 
-measurement_variable_types = [ "cross_section_measurement", "combined_cross_section_measurement" ]
+measurement_variable_types = [ "cross_section_measurement", "composite_cross_section_measurement" ]
 
-class NUISHepDataFluxTable:
+class NUISHEPDataFluxTable:
   def __init__(self, ref, ctx):
     self.record_database_root = os.environ.get("NUISANCEDB")
     self.ref = ref
@@ -29,22 +29,25 @@ class NUISHepDataFluxTable:
       self.variable_type = kvpairs["variable_type"]
 
       if self.variable_type not in [ "probe_flux" ]:
-        raise RuntimeError(str(f"Invalid variable_type qualifier value for NUISHepDataFluxTable: {self.variable_type}"))
+        raise RuntimeError(str(f"Invalid variable_type qualifier value for NUISHEPDataFluxTable: {self.variable_type}"))
 
       self.probe_particle = kvpairs["probe_particle"]
       self.bin_content_type  = kvpairs["bin_content_type"]
       self.bins = [ (b["low"], b["high"]) for b in table_yaml["independent_variables"][0]["values"] ]
       self.values = list(depvar['values'])
 
-  def __repr__(self):
-    return f"""
-        ref: {self.ref}
-        nbins: {len(self.bins)}
-        probe_particle: {self.probe_particle}
-        bin_content_type: {self.bin_content_type}
-"""
+  def tostr(self, indent=""):
+    return f"""{{
+{indent}  ref: {self.ref}
+{indent}  nbins: {len(self.bins)}
+{indent}  probe_particle: {self.probe_particle}
+{indent}  bin_content_type: {self.bin_content_type}
+{indent}}}"""
 
-class NUISHepDataErrorTable:
+  def __repr__(self):
+    return self.tostr()
+
+class NUISHEPDataErrorTable:
   def __init__(self, ref, ctx):
     self.record_database_root = os.environ.get("NUISANCEDB")
 
@@ -68,15 +71,15 @@ class NUISHepDataErrorTable:
       self.variable_type = kvpairs["variable_type"]
       
       if self.variable_type != "error_table":
-        raise RuntimeError(str(f"Invalid variable_type qualifier value for NUISHepDataErrorTable: {self.variable_type}"))
+        raise RuntimeError(str(f"Invalid variable_type qualifier value for NUISHEPDataErrorTable: {self.variable_type}"))
 
       self.error_type = kvpairs["error_type"]
 
       if self.error_type not in [ "covariance", "correlation" ]:
-        raise RuntimeError(str(f"Invalid error_type qualifier value for NUISHepDataErrorTable: {self.error_type}"))
+        raise RuntimeError(str(f"Invalid error_type qualifier value for NUISHEPDataErrorTable: {self.error_type}"))
 
 
-class NUISHepDataDependentVariable:
+class NUISHEPDataDependentVariable:
   def __init__(self, indepvars, depvar, ctx):
 
     kvpairs = { x["name"]: x["value"] for x in depvar["qualifiers"] }
@@ -90,7 +93,7 @@ class NUISHepDataDependentVariable:
     self.measurement_type = kvpairs.get("measurement_type", "flux_avgeraged_differential_cross_section")
 
     if self.measurement_type not in [ "flux_avgeraged_differential_cross_section", "event_rate", "ratio", "total_cross_section" ]:
-      raise RuntimeError(str(f"Invalid measurement_type qualifier value for NUISHepDataDependentVariable: {self.measurement_type}"))
+      raise RuntimeError(str(f"Invalid measurement_type qualifier value for NUISHEPDataDependentVariable: {self.measurement_type}"))
 
     if self.variable_type == "cross_section_measurement":
       self.selectfunc = kvpairs["selectfunc"]
@@ -104,12 +107,12 @@ class NUISHepDataDependentVariable:
 
       for xs_flag in self.cross_section_units:
         if xs_flag not in xs_allunits:
-          raise RuntimeError(str(f"Invalid cross_section_units qualifier flag for NUISHepDataDependentVariable: {xs_flag}"))
+          raise RuntimeError(str(f"Invalid cross_section_units qualifier flag for NUISHEPDataDependentVariable: {xs_flag}"))
 
       self.target = kvpairs["target"]
-      self.probe_spectra = kvpairs["probe_spectra"]
+      self.probe_flux = kvpairs["probe_flux"]
 
-      self.flux = NUISHepDataFluxTable(self.probe_spectra, ctx)
+      self.flux = NUISHEPDataFluxTable(self.probe_flux, ctx)
     else:
       self.record_database_root = os.environ.get("NUISANCEDB")
 
@@ -130,7 +133,7 @@ class NUISHepDataDependentVariable:
 
             for qual in depvar["qualifiers"]:
               if qual["name"] == "variable_type" and qual["value"] in measurement_variable_types:
-                sub_measurement = NUISHepDataMeasurementTable(sub_ctx["resourcename"], tdoc, sub_ctx)
+                sub_measurement = NUISHEPDataMeasurementTable(sub_ctx["resourcename"], tdoc, sub_ctx)
 
         if not sub_measurement:
           raise RuntimeError(str(f"Failed to resolve sub_measurement reference:\"{smr}\" to a dependent variable on another table"))
@@ -146,32 +149,46 @@ class NUISHepDataDependentVariable:
 
     self.test_statistic = kvpairs.get("test_statistic", "chi2")
     self.error = kvpairs.get("error")
-    self.error_table = NUISHepDataErrorTable(self.error, ctx) if self.error else None
+    self.error_table = "" #NUISHEPDataErrorTable(self.error, ctx) if self.error else None
     self.smearing = kvpairs.get("smearing")
-    self.smearing_table = NUISHepDataErrorTable(self.smearing, ctx) if self.smearing else None
+    self.smearing_table = "" #NUISHEPDataErrorTable(self.smearing, ctx) if self.smearing else None
+
+  def tostr(self, indent=""):
+    if self.variable_type == "cross_section_measurement":
+      outstr = f"""{{ 
+{indent}  variable_type: {self.variable_type}
+{indent}  selectfunc: {self.selectfunc}
+{indent}  projectfuncs: {{
+"""
+      for var, ref in self.projectfuncs.items():
+        outstr += indent + f"    {var}: \'{ref}\',\n"
+      outstr += f"""{indent}  }}
+{indent}  cross_section_units: {self.cross_section_units}
+{indent}  target: {self.target}
+{indent}  flux: {self.flux.tostr(indent + '  ')}
+{indent}  test_statistic: {self.test_statistic}
+{indent}  error_table: {self.error_table}
+{indent}  smearing_table: {self.smearing_table}
+{indent}}}"""
+      return outstr
+    else:
+      outstr = f"""{{
+{indent}  variable_type: {self.variable_type}
+{indent}  sub_dependent_variables: [
+"""
+      for dv in self.sub_dependent_variables:
+        outstr += indent + "    " + dv.tostr(indent + "    ") + ",\n"
+      outstr += f"""{indent}  ]
+{indent}  test_statistic: {self.test_statistic}
+{indent}  error_table: {self.error_table}
+{indent}  smearing_table: {self.smearing_table}
+{indent}}}"""
+      return outstr
 
   def __repr__(self):
-    if self.variable_type == "cross_section_measurement":
-      return f"""
-      selectfunc: {self.selectfunc}
-      projectfuncs: {self.projectfuncs}
-      cross_section_units: {self.cross_section_units}
-      target: {self.target}
-      flux: {self.flux}
-      test_statistic: {self.test_statistic}
-      error_table: {self.error_table}
-      smearing_table: {self.smearing_table}
-"""
-    else:
-      return f"""
-      sub_dependent_variables:
-      {self.sub_dependent_variables}
-      test_statistic: {self.test_statistic}
-      error_table: {self.error_table}
-      smearing_table: {self.smearing_table}
-"""
+    return self.tostr()
 
-class NUISHepDataMeasurementTable:
+class NUISHEPDataMeasurementTable:
   def __init__(self, name, table, ctx):
 
     self.name = name
@@ -189,18 +206,30 @@ class NUISHepDataMeasurementTable:
     for depvar in table["dependent_variables"]:
       kvpairs = { x["name"]: x["value"] for x in depvar["qualifiers"] }
       if "variable_type" in kvpairs and kvpairs["variable_type"] in measurement_variable_types:
-        self.dependent_variables.append(NUISHepDataDependentVariable(self.independent_variables, depvar, ctx))
+        self.dependent_variables.append(NUISHEPDataDependentVariable(self.independent_variables, depvar, ctx))
+
+  def tostr(self, indent=""):
+    outstr = f"""{{
+{indent}  name: {self.name}
+{indent}  independent_variables: [
+"""
+    for iv in self.independent_variables:
+      outstr += f"{indent}    {iv['name']},\n"
+    outstr += f"{indent}  ]\n"
+
+    outstr += f"""{indent}  dependent_variables: [
+"""
+    for dv in self.dependent_variables:
+      outstr += indent + "    " + dv.tostr(indent + "    ") + ",\n"
+    outstr += f"{indent}  ]\n"
+    outstr += f"{indent}}}"
+    
+    return outstr
 
   def __repr__(self):
-    ivars = [ x["name"] for x in self.independent_variables ]
-    return f"""
-    name: {self.name}
-    independent variables: {ivars}
-    dependent variables: 
-      {self.dependent_variables}
-"""
+    return self.tostr()
 
-class NUISHepDataRecord(object):
+class NUISHEPDataRecord(object):
   def __init__(self, ref):
     self.record_database_root = os.environ.get("NUISANCEDB")
 
@@ -214,6 +243,7 @@ class NUISHepDataRecord(object):
 
       self.cross_section_measurements = []
       self.additional_resources = []
+
       # loop through sub-documents in the submission file and get all named tables
       for doc in submission_yaml:
         if "data_file" in doc:
@@ -225,15 +255,26 @@ class NUISHepDataRecord(object):
               for depvar in tdoc["dependent_variables"]:
                 for qual in depvar["qualifiers"]:
                   if qual["name"] == "variable_type" and qual["value"] in measurement_variable_types:
-                    self.cross_section_measurements.append(NUISHepDataMeasurementTable(docname, tdoc, self.ctx))
+                    self.cross_section_measurements.append(NUISHEPDataMeasurementTable(docname, tdoc, self.ctx))
         else:
           for addres in doc["additional_resources"]:
             self.additional_resources.append(addres["location"])
 
-  def __repr__(self):
-    return f"""Record: {self.ctx['reftype']}:{self.ctx['recordid']}
-  cross_section_measurements: 
-    {self.cross_section_measurements}
-  additional_resources: 
-    {self.additional_resources}
+  def tostr(self, indent=""):
+    outstr = f"""{indent}Record: {self.ctx['reftype']}:{self.ctx['recordid']}
+{indent}  cross_section_measurements: [
 """
+    for xsm in self.cross_section_measurements:
+      outstr += indent + "    " + xsm.tostr(indent + "    ") + ",\n"
+    outstr += f"{indent}  ]\n"
+
+    outstr += f"""{indent}  additional_resources: [
+"""
+    for ar in self.additional_resources:
+      outstr +=  f"{indent}    {ar},\n"
+    outstr += f"{indent}  ]"
+
+    return outstr
+
+  def __repr__(self):
+    return self.tostr()
