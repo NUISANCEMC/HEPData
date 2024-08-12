@@ -19,6 +19,7 @@ We want to implement the minimum set of specific cases that cover the majority o
   - [Errors](#errors)
   - [Smearing](#smearing)
   - [Analysis Snippets](#analysis-snippets)
++ [Building a Data Release](#building-a-data-release)
 + [Tools and Utilities](#tools-and-utilities)
 + [What To Do If My Measurement Doesn't Fit?](#what-to-do-if-my-measurement-doesn-t-fit)
 
@@ -295,6 +296,290 @@ To avoid problems that would be encountered from sequentially loading multiple a
 | ------------- | --------- | ----------------- |
 | Selection | `int MicroBooNE_CC0Pi_2019_Selection_123456(HepMC3 const &)` | `<Experiment>_<MeasurementSpecifier>_<Year>_Select_<INSPIREHEPId>` |
 | Projection |  `double MicroBooNE_CC0Pi_2019_DeltaPT_123456(HepMC3 const &)` | `<Experiment>_<MeasurementSpecifier>_<Year>_<ProjectionName>_<INSPIREHEPId>` |
+
+# Building a Data Release
+
+This section contains some useful python examples that you should be able to easily adapt to build a compliant HEPData submission for your data release. It will illustrate building a data release for the T2K on/off axis CC0Pi cross section measurement ([PRD.108.112009](https://doi.org/10.1103/PhysRevD.108.112009)).
+
+We will make extensive use of the useful [hepdata_lib](https://hepdata-lib.readthedocs.io/en/latest/) python module and recommend you do the same. If you have feature requests for the library, please contact us, the authors, or just submit a clear Issue on the [github](https://github.com/HEPData/hepdata_lib). 
+
+## Front Matter
+
+We recommend starting your `ToHepData.py` script with imports and at least the INSPIRE_id for your paper.
+
+```python
+#!/usr/bin/env python3
+
+import os, csv
+import yaml, ROOT
+import requests
+
+from hepdata_lib import Submission, Table, Variable, Uncertainty, RootFileReader
+
+ref = "PRD.108.112009"
+INSPIRE_id=2646102
+```
+
+In many instances you can make the script download and untar an existing version of the data release for you. This is only helpful if the HEPData release you are building is not the first release of this data.
+
+```python
+if not os.path.exists("onoffaxis_data_release/analysis_flux.root"):
+  if not os.path.exists("onoffaxis_data_release.tar.gz"):
+    # make the initial request
+    req = requests.get("https://zenodo.org/records/7768255/files/onoffaxis_data_release.tar.gz?download=1", params={"download": 1})
+    # check the response code
+    if req.status_code != requests.codes.ok:
+      raise RuntimeError("Failed to download data release from: https://zenodo.org/records/7768255/files/onoffaxis_data_release.tar.gz?download=1")
+    # write the response to disk
+    with open("onoffaxis_data_release.tar.gz", 'wb') as fd:
+      for chunk in req.iter_content(chunk_size=128):
+        fd.write(chunk)
+
+  # ask a system shell to untar it for you
+  os.system("mkdir -p onoffaxis_data_release && tar -zxvf onoffaxis_data_release.tar.gz -C onoffaxis_data_release")
+```
+
+## Building a Submission
+
+```python
+# instantiate a submission object 
+submission = Submission()
+
+# the details of these functions will be detailed below
+# -> construct all of the tables constituting the data release
+submission.add_table(nd280_analysis())
+submission.add_table(ingrid_analysis())
+cov,ana = joint_analysis()
+submission.add_table(cov)
+submission.add_table(ana)
+submission.add_table(build_flux_table("ingrid_flux_fine_postfit","flux-onaxis-postfit-fine"))
+submission.add_table(build_flux_table("nd280_flux_fine_postfit","flux-offaxis-postfit-fine"))
+
+# add this script to the data release so the steps involved in its creation are transparent
+submission.add_additional_resource(description="Python conversion script used to build this submisson. Part of NUISANCE.",
+    location="ToHepData.py",
+    copy_file=True)
+
+# add the ProSelecta snippet file to the data release
+submission.add_additional_resource(description="Selection and projection function examples. Can be executued in the ProSelecta environment v1.0.",
+    location="analysis.cxx",
+    copy_file=True,
+    file_type="ProSelecta")
+
+# add some useful links to the data release
+submission.add_link(description="official data release", location="https://doi.org/10.5281/zenodo.7768255")
+submission.add_link(description="Use with NUISANCE3", location="https://github.com/NUISANCEMC/nuisance3")
+submission.add_link(description="Adheres to the NUISANCE HEPData Conventions", location="https://github.com/NUISANCEMC/HEPData/tree/main")
+
+# build the submission files, ready for upload
+submission.create_files(f"submission-{INSPIRE_id}", remove_old=True)
+```
+
+## CSV File
+
+We're going to look at parsing the file `nd280_analysis_binning.csv` from the data release in question. It starts like this:
+
+```csv
+bin,low_angle,high_angle,low_momentum,high_momentum
+1, -1.00, 0.20,    0,  30000
+2,  0.20, 0.60,    0,  300
+3,  0.20, 0.60,  300,  400
+4,  0.20, 0.60,  400,  500
+5,  0.20, 0.60,  500,  600
+6,  0.20, 0.60,  600,  30000
+...
+```
+
+We can parse the required bin edge information using the standard library `csv` module:
+
+```python
+import csv
+
+cos_thetamu_bins = []
+pmu_bins = []
+
+with open("onoffaxis_data_release/nd280_analysis_binning.csv", newline='') as csvfile:
+  # by default this class 
+  csvreader = csv.DictReader(csvfile)
+  for row in csvreader:
+    cos_thetamu_bins.append((float(row["low_angle"]), float(row["high_angle"])))
+    pmu_bins.append((float(row["low_momentum"])/1E3, float(row["high_momentum"])/1E3))
+```
+
+Or we can use the ubiquitous `numpy` module:
+
+```python
+import numpy as np
+
+nd280_analysis_binning = np.genfromtxt("onoffaxis_data_release/nd280_analysis_binning.csv",
+                                        delimiter=",", skip_header=1)
+
+# take the 2nd and 3rd column as the cos theta bin edges
+cos_thetamu_bins = nd280_analysis_binning[:,1:3] 
+# and the 4th
+pmu_bins = nd280_analysis_binning[:,3:5] / 1E3
+
+```
+
+We then use this to read the binning, data values, and errors from the data release into the relevant `hepdata_lib` objects, as below.
+
+```python
+def nd280_analysis():
+
+  nd280_analysis_binning = np.genfromtxt("onoffaxis_data_release/nd280_analysis_binning.csv",
+                                        delimiter=",", skip_header=1)
+
+  CosThetaVar = Variable("cos_theta_mu", is_independent=True, is_binned=True, units="")
+  CosThetaVar.values = nd280_analysis_binning[:,1:3] 
+
+  PVar = Variable("p_mu", is_independent=True, is_binned=True, units="MeV/c")
+  PVar.values = nd280_analysis_binning[:,3:5] / 1E3
+
+  xsec_data_mc = np.genfromtxt("onoffaxis_data_release/xsec_data_mc.csv",
+                                          delimiter=",", skip_header=1)
+
+  # the first 58 rows are nd280-only
+  nd280_data_mc = xsec_data_mc[:58,...]
+
+  CrossSection = Variable("cross_section", is_independent=False, is_binned=False, 
+                          units="$cm${}^{2} c/MeV /Nucleon$")
+  CrossSection.values = nd280_data_mc[:,1]
+
+  # qualify the variable type and measurement type
+  CrossSection.add_qualifier("variable_type", "cross_section_measurement")
+  CrossSection.add_qualifier("measurement_type", "flux_averaged_differential_cross_section")
+
+  # add the selection and projection ProSelecta function reference qualifiers
+  CrossSection.add_qualifier("selectfunc", "analysis.cxx:T2K_CC0Pi_onoffaxis_nu_SelectSignal")
+  CrossSection.add_qualifier("cos_theta_mu:projectfunc", "analysis.cxx:T2K_CC0Pi_onoffaxis_nu_Project_CosThetaMu")
+  CrossSection.add_qualifier("p_mu:projectfunc", "analysis.cxx:T2K_CC0Pi_onoffaxis_nu_Project_PMu")
+
+  # add the target specifier and probe_flux reference qualifiers
+  CrossSection.add_qualifier("target", "CH")
+  CrossSection.add_qualifier("probe_flux", "flux-offaxis-postfit-fine")
+
+  # if the publication includes predictions, it is often useful to also include
+  CrossSectionNEUT = Variable("cross_section_neut-prediction", is_independent=False, 
+                              is_binned=False, units="$cm${}^{2} c/MeV /Nucleon$")
+  CrossSectionNEUT.values = nd280_data_mc[:,2]
+
+  CrossSectionNEUT.add_qualifier("variable_type", "cross_section_prediction")
+
+  cov_matrix = np.genfromtxt("onoffaxis_data_release/cov_matrix.csv",
+                                        delimiter=",")
+  nd280_cov_matrix = cov_matrix[:58,:58]
+
+  TotalUncertainty = Uncertainty("total", is_symmetric=True)
+  TotalUncertainty.values = np.sqrt(np.diagonal(nd280_cov_matrix))
+
+  CrossSection.add_uncertainty(TotalUncertainty)
+
+  xsTable = Table("cross_section-offaxis")
+  xsTable.description = """Extracted ND280 cross section as a function of muon momentum in angle bins compared to the nominal NEUT MC prediction. Note that the final bin extending to 30 GeV=c has been omitted for clarity."""
+  xsTable.location = "FIG. 21. in the publication"
+
+  xsTable.add_variable(PVar)
+  xsTable.add_variable(CosThetaVar)
+  xsTable.add_variable(CrossSection)
+  xsTable.add_variable(CrossSectionNEUT)
+  xsTable.add_image("fig21.png")
+
+  xsTable.keywords["observables"] = ["D2SIG/DP/DCOSTHETA"]
+  xsTable.keywords["reactions"] = ["NUMU C --> MU- P"]
+  xsTable.keywords["phrases"] = ["Neutrino CC0Pi", "Cross Section"]
+
+  return xsTable
+```
+
+The `ingrid_analysis` method is very similar. Below is a method that builds a `composite_cross_section_measurement` table providing the covariance matrix that spans both the `nd280_analysis` and `ingrid_analysis` data.
+
+```python
+def joint_analysis():
+
+  cov_matrix = np.genfromtxt("onoffaxis_data_release/cov_matrix.csv",
+                                        delimiter=",")
+
+  # all bin definitions are built as a single array, each bin then has an extent or value in
+  # every relevant independent variable, or dimension
+  allbins = []
+  for j in np.arange(cov_matrix.shape[0]):
+    for i in np.arange(cov_matrix.shape[0]):
+      allbins.append((i,j))
+  allbins = np.array(allbins)
+
+  bin_i = Variable("bin_i", is_independent=True, is_binned=False, units="")
+  bin_i.values = allbins[:,0]
+
+  bin_j = Variable("bin_j", is_independent=True, is_binned=False, units="")
+  bin_j.values = allbins[:,1]
+
+  Covariance = Variable("covariance", is_independent=False, is_binned=False, units=r"$(cm${}^{2} c/MeV /Nucleon)^{2}$")
+  # ravel flattens the array to 1D, row-major by default
+  Covariance.values = np.ravel(cov_matrix)
+
+  inv_cov_matrix = np.genfromtxt("onoffaxis_data_release/inv_matrix.csv",
+                                        delimiter=",")
+
+  Invcovariance = Variable("inverse_covariance", is_independent=False, is_binned=False, units=r"$(cm${}^{2} c/MeV /Nucleon)^{-2}$")
+  Invcovariance.values = np.ravel(inv_cov_matrix)
+
+  Covariance.add_qualifier("variable_type", "error_table")
+  Covariance.add_qualifier("error_type", "covariance")
+
+  Invcovariance.add_qualifier("variable_type", "error_table")
+  Invcovariance.add_qualifier("error_type", "inverse_covariance")
+
+  covmatTable = Table("covariance-onoffaxis")
+  covmatTable.description = """This table contains the covariance and pre-inverted covariance for the joint on/off axis analysis. See the covered measurements for the constituent measurements."""
+
+  covmatTable.add_variable(bin_i)
+  covmatTable.add_variable(bin_j)
+  covmatTable.add_variable(Covariance)
+  covmatTable.add_variable(Invcovariance)
+
+  jointTable = Table("cross_section-onoffaxis")
+  CrossSection = Variable("cross_section", is_independent=False)
+  CrossSection.add_qualifier("variable_type", "composite_cross_section_measurement")
+  CrossSection.add_qualifier("sub_measurements", "cross_section-offaxis,cross_section-onaxis")
+  CrossSection.add_qualifier("error", "covariance-onoffaxis:inverse_covariance")
+  jointTable.add_variable(CrossSection)
+
+  return (covmatTable,jointTable)
+```
+
+## ROOT Histogram
+
+```python
+def build_flux_table(hname, tname):
+  # instantiate a table object 
+  FluxTable = Table(tname)
+
+  # for simple root histograms, we can use the hepdata_lib RootFileReader helper object to
+  # convert a histogram into a useful format
+  # See https://hepdata-lib.readthedocs.io/en/latest/usage.html#reading-from-root-files
+  reader = RootFileReader("onoffaxis_data_release/analysis_flux.root")
+  flux_histo = reader.read_hist_1d(hname)
+
+  # define the 'x' axis independent variable
+  EnuVar = Variable("e_nu", is_independent=True, is_binned=True, units="GeV")
+  EnuVar.values = flux_histo["x_edges"]
+
+  # define the 'y' axis dependent variable
+  FluxVar = Variable("flux_nu", is_independent=False, is_binned=False, units="$/cm^{2}/50MeV/10^{21}p.o.t$")
+  FluxVar.values = flux_histo["y"]
+
+  # add some all-important qualifiers. qualifiers can only be added to dependent variables
+  FluxVar.add_qualifier("variable_type", "probe_flux")
+  FluxVar.add_qualifier("probe_particle", "numu")
+  FluxVar.add_qualifier("bin_content_type", "count_density")
+
+  # add the variables to the table
+  FluxTable.add_variable(EnuVar)
+  FluxTable.add_variable(FluxVar)
+
+  # return the table for addition to the submission
+  return FluxTable
+```
 
 # Tools and Utilities
 

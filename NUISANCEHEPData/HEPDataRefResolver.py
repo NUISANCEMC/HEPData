@@ -12,8 +12,6 @@ logger = logging.getLogger("HepDataRefResolver")
 
 def ResolveReferenceIdentifiers(hepdata_reference, **context):
 
-  logger.info(f"ResolveReferenceIdentifiers({hepdata_reference},{context})")
-
   refcomps = {
     "reftype": str(context.get("reftype","")),
     "recordid": str(context.get("recordid","")),
@@ -65,7 +63,9 @@ def ResolveReferenceIdentifiers(hepdata_reference, **context):
   if not refcomps["recordid"]:
     raise RuntimeError(str(f"Didn't resolve a recordid for reference \"{hepdata_reference}\", with context: {context}"))
 
-  logger.info(f"ResolveReferenceIdentifiers({hepdata_reference},{context}) -> {refcomps}")
+  logger.info(f"""ResolveReferenceIdentifiers(hepdata_reference={hepdata_reference},context={context}):
+    -> {refcomps}
+  """)
 
   return refcomps
 
@@ -109,10 +109,20 @@ def ResolveHepDataReference(root_dir, **refcomps):
 
   local_record_path = _build_local_HepData_path(root_dir, **refcomps)
   local_resource_path = _resolve_resource_yaml_path(local_record_path, **refcomps)
+  logger.info(f"""ResolveHepDataReference(root_dir={root_dir},refcomps={refcomps}):
+      local_record_path = {local_record_path} (exists: {os.path.exists(local_record_path)})
+      local_resource_path = {local_resource_path} (exists: {os.path.exists(local_resource_path)})
+""")
   if local_resource_path and os.path.exists(local_resource_path):
+    logger.info(f"""ResolveHepDataReference(root_dir={root_dir},refcomps={refcomps}):
+      Returning local path
+  """)
     return local_record_path, local_resource_path, refcomps
 
   # we don't have it and need to fetch it
+  logger.info(f"""ResolveHepDataReference(root_dir={root_dir},refcomps={refcomps}):
+      Need to fetch record
+  """)
 
   if reftype == "hepdata-sandbox":
     record_URL = f"https://www.hepdata.net/record/sandbox/{recordid}"
@@ -120,6 +130,9 @@ def ResolveHepDataReference(root_dir, **refcomps):
     record_URL = f"https://www.hepdata.net/record/{recordid}"
 
   sub_response = requests.get(record_URL, params={"format": "json"})
+  logger.info(f"""ResolveHepDataReference(root_dir={root_dir},refcomps={refcomps}):
+    requests.get(record_URL={record_URL}) -> {sub_response.status_code}
+""")
 
   if sub_response.status_code != requests.codes.ok:
     testother = _tryotherhepdata(reftype, recordid)
@@ -147,7 +160,9 @@ def ResolveHepDataReference(root_dir, **refcomps):
 
   local_record_root = f"{root_dir}/{recordid}"
   if not os.path.exists(local_record_root):
-    logger.info(f"Making local record directory: {local_record_root}")
+    logger.info(f"""ResolveHepDataReference(root_dir={root_dir},refcomps={refcomps}):
+    Making local record directory: {local_record_root}
+""")
     os.makedirs(local_record_root)
 
   local_record_path = _build_local_HepData_path(root_dir, recordid, recordvers)
@@ -201,6 +216,10 @@ def ResolveINSPIREHEPReference(root_dir, **refcomps):
 
   local_record_path = _build_local_INSPIREHEP_path(root_dir, **refcomps)
   local_resource_path = _resolve_resource_yaml_path(local_record_path, **refcomps)
+  logger.info(f"""ResolveINSPIREHEPReference(root_dir={root_dir},refcomps={refcomps}):
+      local_record_path = {local_record_path} (exists: {os.path.exists(local_record_path)})
+      local_resource_path = {local_resource_path} (exists: {os.path.exists(local_resource_path)})
+""")
   if local_resource_path and os.path.exists(local_resource_path):
     return local_record_path, local_resource_path, refcomps
 

@@ -233,7 +233,7 @@ class NUISHEPDataRecord(object):
   def __init__(self, ref):
     self.record_database_root = os.environ.get("NUISANCEDB")
 
-    # logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO)
 
     # ensure that a local copy of the record exists
     self.record_path, _, self.ctx = GetLocalPathToResource(self.record_database_root, ref)
