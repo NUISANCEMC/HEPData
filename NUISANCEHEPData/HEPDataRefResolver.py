@@ -109,10 +109,14 @@ def ResolveHepDataReference(root_dir, **refcomps):
 
   local_record_path = _build_local_HepData_path(root_dir, **refcomps)
   local_resource_path = _resolve_resource_yaml_path(local_record_path, **refcomps)
+
+  local_record_path_exists = True if local_record_path is not None and os.path.exists(local_record_path) else False
+  local_resource_path_exists = True if local_resource_path is not None and os.path.exists(local_resource_path) else False
   logger.info(f"""ResolveHepDataReference(root_dir={root_dir},refcomps={refcomps}):
-      local_record_path = {local_record_path} (exists: {os.path.exists(local_record_path)})
-      local_resource_path = {local_resource_path} (exists: {os.path.exists(local_resource_path)})
+      local_record_path = {local_record_path} (exists: {os.path.exists(local_record_path_exists)})
+      local_resource_path = {local_resource_path} (exists: {os.path.exists(local_resource_path_exists)})
 """)
+
   if local_resource_path and os.path.exists(local_resource_path):
     logger.info(f"""ResolveHepDataReference(root_dir={root_dir},refcomps={refcomps}):
       Returning local path
@@ -216,14 +220,18 @@ def ResolveINSPIREHEPReference(root_dir, **refcomps):
 
   local_record_path = _build_local_INSPIREHEP_path(root_dir, **refcomps)
   local_resource_path = _resolve_resource_yaml_path(local_record_path, **refcomps)
+
+  local_record_path_exists = True if local_record_path is not None and os.path.exists(local_record_path) else False
+  local_resource_path_exists = True if local_resource_path is not None and os.path.exists(local_resource_path) else False
   logger.info(f"""ResolveINSPIREHEPReference(root_dir={root_dir},refcomps={refcomps}):
-      local_record_path = {local_record_path} (exists: {os.path.exists(local_record_path)})
-      local_resource_path = {local_resource_path} (exists: {os.path.exists(local_resource_path)})
+      local_record_path = {local_record_path} (exists: {local_record_path_exists})
+      local_resource_path = {local_resource_path} (exists: {local_resource_path_exists})
 """)
+
   if local_resource_path and os.path.exists(local_resource_path):
     return local_record_path, local_resource_path, refcomps
 
-  raise RuntimeError(str(f"Expected resource {resourcename} to exist in {local_record_path}"))
+  raise RuntimeError(str(f"Resource {resourcename} does not exist in {local_record_path}"))
 
 # returns: (string: local_record_path, string: local_resource_path, dict: context)
 def GetLocalPathToResource(outdir_root, reference, *args, **context):

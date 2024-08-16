@@ -5,7 +5,7 @@ from .HEPDataRefResolver import *
 measurement_variable_types = [ "cross_section_measurement", "composite_cross_section_measurement" ]
 
 class NUISHEPDataFluxTable:
-  def __init__(self, ref, ctx):
+  def __init__(self, ref, ctx={}):
     self.record_database_root = os.environ.get("NUISANCEDB")
     self.ref = ref
 
@@ -24,15 +24,15 @@ class NUISHEPDataFluxTable:
       else:
         depvar = table_yaml["dependent_variables"][0]
 
-      kvpairs = { x["name"]: x["value"] for x in depvar["qualifiers"] }
+      self.quals = { x["name"]: x["value"] for x in depvar["qualifiers"] }
 
-      self.variable_type = kvpairs["variable_type"]
+      self.variable_type = self.quals["variable_type"]
 
       if self.variable_type not in [ "probe_flux" ]:
         raise RuntimeError(str(f"Invalid variable_type qualifier value for NUISHEPDataFluxTable: {self.variable_type}"))
 
-      self.probe_particle = kvpairs["probe_particle"]
-      self.bin_content_type  = kvpairs["bin_content_type"]
+      self.probe_particle = self.quals["probe_particle"]
+      self.bin_content_type  = self.quals["bin_content_type"]
       self.bins = [ (b["low"], b["high"]) for b in table_yaml["independent_variables"][0]["values"] ]
       self.values = list(depvar['values'])
 
@@ -48,7 +48,7 @@ class NUISHEPDataFluxTable:
     return self.tostr()
 
 class NUISHEPDataErrorTable:
-  def __init__(self, ref, ctx):
+  def __init__(self, ref, ctx={}):
     self.record_database_root = os.environ.get("NUISANCEDB")
 
     # ensure that a local copy of the resource exists
@@ -66,39 +66,39 @@ class NUISHEPDataErrorTable:
       else:
         depvar = table_yaml["dependent_variables"][0]
 
-      kvpairs = { x["name"]: x["value"] for x in depvar["qualifiers"] }
+      self.quals = { x["name"]: x["value"] for x in depvar["qualifiers"] }
 
-      self.variable_type = kvpairs["variable_type"]
+      self.variable_type = self.quals["variable_type"]
       
       if self.variable_type != "error_table":
         raise RuntimeError(str(f"Invalid variable_type qualifier value for NUISHEPDataErrorTable: {self.variable_type}"))
 
-      self.error_type = kvpairs["error_type"]
+      self.error_type = self.quals["error_type"]
 
       if self.error_type not in [ "covariance", "correlation" ]:
         raise RuntimeError(str(f"Invalid error_type qualifier value for NUISHEPDataErrorTable: {self.error_type}"))
 
 
 class NUISHEPDataDependentVariable:
-  def __init__(self, indepvars, depvar, ctx):
+  def __init__(self, indepvars, depvar, ctx={}):
 
-    kvpairs = { x["name"]: x["value"] for x in depvar["qualifiers"] }
+    self.quals = { x["name"]: x["value"] for x in depvar["qualifiers"] }
 
     self.indepvar = indepvars.copy()
 
     self.name = depvar["header"]["name"]
 
-    self.variable_type = kvpairs["variable_type"]
+    self.variable_type = self.quals["variable_type"]
 
-    self.measurement_type = kvpairs.get("measurement_type", "flux_avgeraged_differential_cross_section")
+    self.measurement_type = self.quals.get("measurement_type", "flux_avgeraged_differential_cross_section")
 
     if self.measurement_type not in [ "flux_avgeraged_differential_cross_section", "event_rate", "ratio", "total_cross_section" ]:
       raise RuntimeError(str(f"Invalid measurement_type qualifier value for NUISHEPDataDependentVariable: {self.measurement_type}"))
 
     if self.variable_type == "cross_section_measurement":
-      self.selectfunc = kvpairs["selectfunc"]
-      self.projectfuncs = { v['name']: kvpairs[f"{v['name']}:projectfunc"] for v in indepvars }
-      self.cross_section_units = kvpairs.get("cross_section_units", "pb|per_target|per_bin_width").split("|")
+      self.selectfunc = self.quals["selectfunc"]
+      self.projectfuncs = { v['name']: self.quals[f"{v['name']}:projectfunc"] for v in indepvars }
+      self.cross_section_units = self.quals.get("cross_section_units", "pb|per_target|per_bin_width").split("|")
 
       xs_base_units = [ "pb", "nb", "cm2", "10E-38cm2" ]
       xs_target_units = [ "per_target", "per_nucleon", "per_neutron", "per_proton" ]
@@ -109,14 +109,14 @@ class NUISHEPDataDependentVariable:
         if xs_flag not in xs_allunits:
           raise RuntimeError(str(f"Invalid cross_section_units qualifier flag for NUISHEPDataDependentVariable: {xs_flag}"))
 
-      self.target = kvpairs["target"]
-      self.probe_flux = kvpairs["probe_flux"]
+      self.target = self.quals["target"]
+      self.probe_flux = self.quals["probe_flux"]
 
       self.flux = NUISHEPDataFluxTable(self.probe_flux, ctx)
     else:
       self.record_database_root = os.environ.get("NUISANCEDB")
 
-      sub_measurement_refs = kvpairs["sub_measurements"].split(",")
+      sub_measurement_refs = self.quals["sub_measurements"].split(",")
       self.sub_dependent_variables = []
 
       for smr in sub_measurement_refs:
@@ -147,10 +147,10 @@ class NUISHEPDataDependentVariable:
             self.sub_dependent_variables.append(dv)
             break
 
-    self.test_statistic = kvpairs.get("test_statistic", "chi2")
-    self.error = kvpairs.get("error")
+    self.test_statistic = self.quals.get("test_statistic", "chi2")
+    self.error = self.quals.get("error")
     self.error_table = "" #NUISHEPDataErrorTable(self.error, ctx) if self.error else None
-    self.smearing = kvpairs.get("smearing")
+    self.smearing = self.quals.get("smearing")
     self.smearing_table = "" #NUISHEPDataErrorTable(self.smearing, ctx) if self.smearing else None
 
   def tostr(self, indent=""):
@@ -189,7 +189,7 @@ class NUISHEPDataDependentVariable:
     return self.tostr()
 
 class NUISHEPDataMeasurementTable:
-  def __init__(self, name, table, ctx):
+  def __init__(self, name, table, ctx={}):
 
     self.name = name
 
@@ -204,8 +204,8 @@ class NUISHEPDataMeasurementTable:
 
     self.dependent_variables = []
     for depvar in table["dependent_variables"]:
-      kvpairs = { x["name"]: x["value"] for x in depvar["qualifiers"] }
-      if "variable_type" in kvpairs and kvpairs["variable_type"] in measurement_variable_types:
+      quals = { x["name"]: x["value"] for x in depvar["qualifiers"] }
+      if "variable_type" in quals and quals["variable_type"] in measurement_variable_types:
         self.dependent_variables.append(NUISHEPDataDependentVariable(self.independent_variables, depvar, ctx))
 
   def tostr(self, indent=""):
@@ -233,10 +233,14 @@ class NUISHEPDataRecord(object):
   def __init__(self, ref):
     self.record_database_root = os.environ.get("NUISANCEDB")
 
-    logging.basicConfig(level=logging.INFO)
+    # logging.basicConfig(level=logging.INFO)
 
     # ensure that a local copy of the record exists
     self.record_path, _, self.ctx = GetLocalPathToResource(self.record_database_root, ref)
+
+    # we only use the reference to get the record, so reset any additional context
+    self.ctx["resourcename"] = ""
+    self.ctx["qualifier"] = ""
 
     with open(f"{self.record_path}/submission.yaml", 'r') as yfile:
       submission_yaml = yaml.safe_load_all(yfile)

@@ -292,10 +292,10 @@ Analysis Snippets are relatively short C++ source files that contain implementat
 
 To avoid problems that would be encountered from sequentially loading multiple analysis snippets containing identically named functions, we provide a naming convention for selection and projection functions that should be followed where possible.
 
-| Function Type | Example | Naming Convention | 
-| ------------- | --------- | ----------------- |
-| Selection | `int MicroBooNE_CC0Pi_2019_Selection_123456(HepMC3 const &)` | `<Experiment>_<MeasurementSpecifier>_<Year>_Select_<INSPIREHEPId>` |
-| Projection |  `double MicroBooNE_CC0Pi_2019_DeltaPT_123456(HepMC3 const &)` | `<Experiment>_<MeasurementSpecifier>_<Year>_<ProjectionName>_<INSPIREHEPId>` |
+| Function Type | Naming Convention | Example  | 
+| ------------- | ----------------- | --------- |
+| Selection | `<Experiment>_<MeasurementSpecifier>_<Year>_Select_<INSPIREHEPId>` | `int MicroBooNE_CC0Pi_2019_Selection_123456(HepMC3 const &)` |
+| Projection | `<Experiment>_<MeasurementSpecifier>_<Year>_<ProjectionName>_<INSPIREHEPId>` | `double MicroBooNE_CC0Pi_2019_DeltaPT_123456(HepMC3 const &)` |
 
 # Building a Data Release
 
