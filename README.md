@@ -19,7 +19,7 @@ We want to implement the minimum set of specific cases that cover the majority o
   - [Errors](#errors)
   - [Smearing](#smearing)
   - [Analysis Snippets](#analysis-snippets)
-+ [Building a Data Release](#building-a-data-release)
++ [Building a Submission](#building-a-submission)
 + [Tools and Utilities](#tools-and-utilities)
 + [What To Do If My Measurement Doesn't Fit?](#what-to-do-if-my-measurement-doesn-t-fit)
 
@@ -583,6 +583,8 @@ def build_flux_table(hname, tname):
 
 # Tools and Utilities
 
+## `NUISANCEHEPData` Python Module
+
 This repository includes the `NUISANCEHEPData` python module for working with HEPData records following these conventions.
 
 Assuming that the environment variable, `NUISANCEDB` points to a directory to which the current user has write access, a local copy of a record can be downloaded, parsed, and queried with the `NUISHEPDataRecord` class. An example follows:
@@ -608,6 +610,150 @@ for xsm in nhr.cross_section_measurements:
 print("Additional Resources:")
 for ar in nhr.additional_resources:
   print(f"\t{ar}")
+```
+
+## `nuis-hepdata` CLI
+
+This repository also contains a CLI tool for querying and populating a local database of HEPData records called `nuis-hepdata`. It is built on the `NUISANCEHEPData` python module but offers shell scripting capabilities for record database management. Full documentation can be obtained by running `./nuis-hepdata help` within this repository, but some example usage is shown below.
+
+### Fetch a Record
+
+This example will use a hepdata-sandbox record, but the examples generalise to public hepdata records identified by their HEPData id or their INSPIRHEP id.
+
+Firstly we will ensure that we have a local copy of the record of interest by running the `get-local-path` command. In general all commands will transparently trigger a record fetch from HEPData.net if a local copy doesn't already exist.
+
+```bash
+$ ./nuis-hepdata --nuisancedb ./database get-local-path hepdata-sandbox:1713531371
+./database/hepdata-sandbox/1713531371/HEPData-1713531371-v1
+```
+
+We can see what is in the record directory:
+
+```bash
+$ ls ./database/hepdata-sandbox/1713531371/HEPData-1713531371-v1
+ToHepData.py                     cross_section-offaxis.yaml       fig21.png                         flux-offaxis-nominal-fine.yaml    
+flux-onaxis-nominal-coarse.yaml  flux-onaxis-postfit-fine.yaml    thumb_fig22.png                   analysis.cxx               
+cross_section-onaxis.yaml        fig22.png                        flux-offaxis-postfit-coarse.yaml  flux-onaxis-nominal-fine.yaml
+submission.yaml                  covariance-onoffaxis.yaml        cross_section-onoffaxis.yaml      flux-offaxis-nominal-coarse.yaml  
+flux-offaxis-postfit-fine.yaml   flux-onaxis-postfit-coarse.yaml  thumb_fig21.png
+```
+
+If we want to follow the remote request logic we can add a `--debug` option, as below:
+
+```bash
+$ ./nuis-hepdata --nuisancedb ./database --debug get-local-path hepdata-sandbox:1713531371
+INFO:HepDataRefResolver:ResolveReferenceIdentifiers(hepdata_reference=hepdata-sandbox:1713531371,context={}):
+    -> {'reftype': 'hepdata-sandbox', 'recordid': '1713531371', 'recordvers': '', 'resourcename': '', 'qualifier': ''}
+  
+INFO:HepDataRefResolver:ResolveHepDataReference(root_dir=./database/hepdata-sandbox,refcomps={'reftype': 'hepdata-sandbox', 'recordid': '1713531371', 'recordvers': '', 'resourcename': '', 'qualifier': ''}):
+      local_record_path = ./database/hepdata-sandbox/1713531371/HEPData-1713531371-v (exists: True)
+      local_resource_path = ./database/hepdata-sandbox/1713531371/HEPData-1713531371-v (exists: True)
+
+INFO:HepDataRefResolver:ResolveHepDataReference(root_dir=./database/hepdata-sandbox,refcomps={'reftype': 'hepdata-sandbox', 'recordid': '1713531371', 'recordvers': '', 'resourcename': '', 'qualifier': ''}):
+      Need to fetch record
+  
+INFO:HepDataRefResolver:ResolveHepDataReference(root_dir=./database/hepdata-sandbox,refcomps={'reftype': 'hepdata-sandbox', 'recordid': '1713531371', 'recordvers': '', 'resourcename': '', 'qualifier': ''}):
+    requests.get(record_URL=https://www.hepdata.net/record/sandbox/1713531371) -> 200
+
+./database/hepdata-sandbox/1713531371/HEPData-1713531371-v1
+```
+
+### A Note on Record Versions
+
+As all records include a version qualifier that is often omitted as it is usually '1'. Record references without the version qualifier will always trigger a remote check to see if a later version of the record is available. This request can be elided by qualifying the reference with the version number that you know you have a local copy of. See the difference between the two below requests.
+
+```bash
+$ ./nuis-hepdata --nuisancedb ./database --debug get-local-path hepdata-sandbox:1713531371v1
+INFO:HepDataRefResolver:ResolveReferenceIdentifiers(hepdata_reference=hepdata-sandbox:1713531371v1,context={}):
+    -> {'reftype': 'hepdata-sandbox', 'recordid': '1713531371', 'recordvers': '1', 'resourcename': '', 'qualifier': ''}
+  
+INFO:HepDataRefResolver:ResolveHepDataReference(root_dir=./database/hepdata-sandbox,refcomps={'reftype': 'hepdata-sandbox', 'recordid': '1713531371', 'recordvers': '1', 'resourcename': '', 'qualifier': ''}):
+      local_record_path = ./database/hepdata-sandbox/1713531371/HEPData-1713531371-v1 (exists: True)
+      local_resource_path = ./database/hepdata-sandbox/1713531371/HEPData-1713531371-v1 (exists: True)
+
+INFO:HepDataRefResolver:ResolveHepDataReference(root_dir=./database/hepdata-sandbox,refcomps={'reftype': 'hepdata-sandbox', 'recordid': '1713531371', 'recordvers': '1', 'resourcename': '', 'qualifier': ''}):
+      Returning local path
+  
+./database/hepdata-sandbox/1713531371/HEPData-1713531371-v1
+
+$ ./nuis-hepdata --nuisancedb ./database --debug get-local-path hepdata-sandbox:1713531371
+INFO:HepDataRefResolver:ResolveReferenceIdentifiers(hepdata_reference=hepdata-sandbox:1713531371,context={}):
+    -> {'reftype': 'hepdata-sandbox', 'recordid': '1713531371', 'recordvers': '', 'resourcename': '', 'qualifier': ''}
+  
+INFO:HepDataRefResolver:ResolveHepDataReference(root_dir=./database/hepdata-sandbox,refcomps={'reftype': 'hepdata-sandbox', 'recordid': '1713531371', 'recordvers': '', 'resourcename': '', 'qualifier': ''}):
+      local_record_path = ./database/hepdata-sandbox/1713531371/HEPData-1713531371-v (exists: True)
+      local_resource_path = ./database/hepdata-sandbox/1713531371/HEPData-1713531371-v (exists: True)
+
+INFO:HepDataRefResolver:ResolveHepDataReference(root_dir=./database/hepdata-sandbox,refcomps={'reftype': 'hepdata-sandbox', 'recordid': '1713531371', 'recordvers': '', 'resourcename': '', 'qualifier': ''}):
+      Need to fetch record
+  
+INFO:HepDataRefResolver:ResolveHepDataReference(root_dir=./database/hepdata-sandbox,refcomps={'reftype': 'hepdata-sandbox', 'recordid': '1713531371', 'recordvers': '', 'resourcename': '', 'qualifier': ''}):
+    requests.get(record_URL=https://www.hepdata.net/record/sandbox/1713531371) -> 200
+
+./database/hepdata-sandbox/1713531371/HEPData-1713531371-v1
+```
+
+The second, unqualified attempt has to check the record metadata to ensure that the latest version is the one that we have a local copy of, this (sometimes unneccessary) round trip to the server takes ~ 1 s.
+
+### Querying a Record
+
+The first bit of information we will usually want from a record is what cross-section measurements are contained within it:
+
+```bash
+$ ./nuis-hepdata --nuisancedb ./database get-cross-section-measurements hepdata-sandbox:1713531371v1
+cross_section-offaxis
+cross_section-onaxis
+cross_section-onoffaxis
+```
+
+This record contains three measurements that we might want to compare to. We probably want to know the independent and dependent variables defined by each measurement, we can request those. Note that now the measurement table name must be included in the reference:
+
+```bash
+$ ./nuis-hepdata --nuisancedb ./database get-independent-vars hepdata-sandbox:1713531371v1/cross_section-onaxis
+p_mu
+cos_theta_mu
+
+$ ./nuis-hepdata --nuisancedb ./database get-dependent-vars hepdata-sandbox:1713531371v1/cross_section-onaxis
+cross_section
+```
+
+A lot of useful metadata is stored in the qualifiers of dependent variables, we can also query those:
+
+```bash
+$ ./nuis-hepdata --nuisancedb ./database get-qualifiers hepdata-sandbox:1713531371v1/cross_section-onaxis
+selectfunc:analysis.cxx:T2K_CC0Pi_onoffaxis_nu_SelectSignal
+cos_theta_mu:projectfunc:analysis.cxx:T2K_CC0Pi_onoffaxis_nu_Project_CosThetaMu
+p_mu:projectfunc:analysis.cxx:T2K_CC0Pi_onoffaxis_nu_Project_PMu
+target:CH
+probe_flux:flux-onaxis-postfit-fine
+variable_type:cross_section_measurement
+pretty_name:$p_{\mu}$
+```
+
+If we want to get the value of a qualifier that we know exists, we can do that too:
+
+```bash
+$ ./nuis-hepdata --nuisancedb ./database get-qualifiers hepdata-sandbox:1713531371v1/cross_section-onaxis selectfunc
+analysis.cxx:T2K_CC0Pi_onoffaxis_nu_SelectSignal
+```
+
+### Following Qualifier References
+
+It is often useful to be able to treat the value of a qualifier as a record reference itself and resolve a local path for it,
+for example when wanting to concretize the probe flux to use in making a measurement prediction. This can be achieved with the
+`dereference-to-local-path` command, as demonstrated below: 
+
+```bash
+$ ./nuis-hepdata --nuisancedb ./database dereference-to-local-path hepdata-sandbox:1713531371v1/cross_section-onaxis probe_flux
+./database/hepdata-sandbox/1713531371/HEPData-1713531371-v1/flux-onaxis-postfit-fine.yaml
+```
+
+Some qualifiers can contain a comma-separated-list of references, these will each separately be resolved to a local path.
+
+```bash
+$ ./nuis-hepdata --nuisancedb ./database dereference-to-local-path hepdata-sandbox:1713531371v1/cross_section-onoffaxis sub_measurements
+./database/hepdata-sandbox/1713531371/HEPData-1713531371-v1/cross_section-offaxis.yaml
+./database/hepdata-sandbox/1713531371/HEPData-1713531371-v1/cross_section-onaxis.yaml
 ```
 
 # What To Do If My Measurement Doesn't Fit?

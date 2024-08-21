@@ -1,0 +1,139 @@
+#!/bin/bash
+
+set -e
+
+COMMAND_FQP=${0}
+COMMAND=$(basename ${COMMAND_FQP})
+
+if [ ! -z ${NUIS_CLI_DEBUG} ]; then
+  echo "[CLI DEBUG](BrCr: ${NUIS_BREADCRUMBS}): ${COMMAND} Arguments(${#}): ${@}"
+fi
+
+function nuis_hepdata_help {
+  echo "Run like: ${NUIS_BREADCRUMBS}${COMMAND} [opts] <command>"
+  echo -e "\tOptions:"
+  echo -e "\t  --nuisancedb <dirpath>                             : Use dirpath as the NUISANCEDB path"
+  echo -e "\t  --debug                                            : Enable logging for fetch requests"
+  echo -e "\tCommands:"
+  echo -e "\t  help                                               : Display this message"
+  echo -e "\t  get-ref-component <comp> [type:]<recid>[/resource] : Get <comp> component from reference."
+  echo -e "\t                                                         Components:"
+  echo -e "\t                                                           reftype"
+  echo -e "\t                                                           recordid"
+  echo -e "\t                                                           recordvers"
+  echo -e "\t                                                           resourcename"
+  echo -e "\t                                                           qualifier"
+  echo -e "\t  get-local-path [type:]<recid>[/resource]           : Get a local path to a resource."
+  echo -e "\t                                                       <type> can be hepdata, hepdata-sandbox, or inspirehep."
+  echo -e "\t                                                       <recid> is the record identifier."
+  echo -e "\t                                                       <resource> is the specific resource,"
+  echo -e "\t                                                       if omitted, get local path to submission"
+  echo -e "\t  get-cross-section-measurements [type:]<recid>      : Get the data tables provided by a hepdata record"
+  echo -e "\t  get-independent-vars [type:]<recid>/table          : Get independent variables for a given table"
+  echo -e "\t  get-dependent-vars [type:]<recid>/table            : Get dependent variables for a given table"
+  echo -e "\t  get-qualifiers [type:]<recid>/table[:qual] [key]   : Get qualifiers on the first dependent variable "
+  echo -e "\t                                                       If <qual> is passed and is a valid qualifier key"
+  echo -e "\t                                                       then only print the value of that qualifier."
+  echo -e "\t  dereference-to-local-path [type:]<recid>/table[:qual] <key> "
+  echo -e "\t                                                     : Dereference the value of qualifier with key=<key> and print a local path"
+  echo -e "\t  get-local-additional-resources [type:]<recid>      : Get the filenames of any additional resources"
+  echo -e "\t                                                       for a given table"
+  echo -e "\n--"
+  echo -e "\n  Example: ${NUIS_BREADCRUMBS}${COMMAND} get-local-path hepdata-sandbox:1713531371v1"
+  echo -e "\n  Example: ${NUIS_BREADCRUMBS}${COMMAND} get-cross-section-measurements hepdata-sandbox:1713531371v1"
+  echo -e "\n  Example: ${NUIS_BREADCRUMBS}${COMMAND} dereference-to-local-path hepdata-sandbox:1713531371v1/cross_section-onaxis probe_flux"
+  echo -e "\n--"
+}
+
+if [ "${#}" -lt 1 ]; then
+  echo -e "[ERROR]: Insufficient arguments passed to ${NUIS_BREADCRUMBS}${COMMAND}"
+  nuis_hepdata_help
+  exit 1
+fi
+
+## Take global options
+while [ "${#}" -gt 0 ]; do
+
+  OPTARG=${1}
+
+  if [ "${OPTARG::1}" != "-" ]; then
+    break;
+  fi
+
+  case $OPTARG in
+
+    --nuisancedb)
+      export NUISANCEDB=${2}
+      shift
+    ;;
+
+    --debug)
+      export NUISANCEHEPData_Logging="ON"
+    ;;
+
+  esac
+
+  shift
+done
+
+KEYARG="${1}"
+shift
+
+if ! python3 -c "import NUISANCEHEPData" &> /dev/null; then
+  export PYTHONPATH=$(dirname $(readlink -f ${COMMAND_FQP})):${PYTHONPATH}
+fi
+
+if ! python3 -c "import NUISANCEHEPData" &> /dev/null; then
+  echo "[ERROR]: python3 cannot import NUISANCEHEPData module. Tried adding  $(dirname $(readlink -f ${COMMAND_FQP})) to PYTHONPATH=${PYTHONPATH}"
+  exit 1
+fi
+
+if [ "${KEYARG}" == "help" ]; then
+  nuis_hepdata_help
+  exit 0
+fi
+
+if [ -z "${NUISANCEDB}" ] || [ ! -e "${NUISANCEDB}" ]; then
+  echo "[ERROR]: NUISANCEDB environment variable is not defined. Cannot proceed."
+  exit 1
+fi
+
+case $KEYARG in
+  get-ref-component)
+    python3 -c "import NUISANCEHEPData as nhd; print(nhd.ResolveReferenceIdentifiers('${2}')['${1}']);"
+    ;;
+
+  get-local-path)
+    python3 -c "import os; import NUISANCEHEPData as nhd; print(nhd.GetLocalPathToResource(os.environ['NUISANCEDB'],'${1}')[1]);"
+    ;;
+
+  dereference-to-local-path)
+    python3 -c "import NUISANCEHEPData as nhd; [ print(x) for x in nhd.CLI.dereference_to_local_path('${1}','${2}') ]"
+    ;;
+
+  get-cross-section-measurements)
+    python3 -c "import NUISANCEHEPData as nhd; hr = nhd.NUISHEPDataRecord('${1}'); [ print(x.name) for x in hr.cross_section_measurements ]"
+    ;;
+
+  get-local-additional-resources)
+    python3 -c "import NUISANCEHEPData as nhd; [ print(x) for x in nhd.CLI.get_local_additional_resources('${1}') ]"
+    ;;
+
+  get-independent-vars)
+    python3 -c "import NUISANCEHEPData as nhd; [ print(x) for x in nhd.CLI.get_independent_vars('${1}') ]"
+    ;;
+
+  get-dependent-vars)
+    python3 -c "import NUISANCEHEPData as nhd; [ print(x) for x in nhd.CLI.get_dependent_vars('${1}') ]"
+    ;;
+
+  get-qualifiers)
+    python3 -c "import NUISANCEHEPData as nhd; [ print(x) for x in nhd.CLI.get_qualifiers('${1}','${2}') ]"
+    ;;
+
+  *)
+    echo "[ERROR] Unknown command ${KEYARG}"
+    nuis_hepdata_help
+    exit 1
+    ;;
+esac

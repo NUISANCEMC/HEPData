@@ -1,6 +1,8 @@
 import yaml
 
 from .HEPDataRefResolver import *
+from types import SimpleNamespace
+import os
 
 measurement_variable_types = [ "cross_section_measurement", "composite_cross_section_measurement" ]
 
@@ -233,8 +235,6 @@ class NUISHEPDataRecord(object):
   def __init__(self, ref):
     self.record_database_root = os.environ.get("NUISANCEDB")
 
-    # logging.basicConfig(level=logging.INFO)
-
     # ensure that a local copy of the record exists
     self.record_path, _, self.ctx = GetLocalPathToResource(self.record_database_root, ref)
 
@@ -282,3 +282,78 @@ class NUISHEPDataRecord(object):
 
   def __repr__(self):
     return self.tostr()
+
+if "NUISANCEHEPData_Logging" in os.environ and os.environ["NUISANCEHEPData_Logging"] == "ON":
+  logging.basicConfig(level=logging.INFO)
+
+
+class CLI:
+  @staticmethod
+  def dereference_to_local_path(ref, key):
+    ctx = ResolveReferenceIdentifiers(ref)
+    return [GetLocalPathToResource(os.environ['NUISANCEDB'], QV, **ctx)[1] for QV in CLI.get_qualifiers(ref, key)[0].split(',')]
+
+  @staticmethod
+  def get_local_additional_resources(ref):
+    rtn = []
+
+    hr = NUISHEPDataRecord(ref); 
+    for x in hr.additional_resources:
+      if os.path.exists(f'{hr.record_path}/{x}'):
+        rtn.append(x)
+
+    return rtn
+
+  @staticmethod
+  def get_independent_vars(ref):
+    rtn = []
+
+    table_name = ResolveReferenceIdentifiers(ref)['resourcename']
+    hr = NUISHEPDataRecord(ref); 
+    xs = { x.name : x for x in hr.cross_section_measurements }
+    hdt = xs[table_name]
+    for x in hdt.independent_variables:
+      rtn.append(x['name'])
+
+    return rtn
+
+  @staticmethod
+  def get_dependent_vars(ref):
+    rtn = []
+
+    table_name = ResolveReferenceIdentifiers(ref)['resourcename']
+    hr = NUISHEPDataRecord(ref); 
+    xs = { x.name : x for x in hr.cross_section_measurements }
+    hdt = xs[table_name]
+    for x in hdt.dependent_variables:
+      rtn.append(x.name)
+
+    return rtn
+
+  @staticmethod
+  def get_qualifiers(ref, key):
+    rtn = []
+
+    table_name = ResolveReferenceIdentifiers(ref)['resourcename']
+    qual = ResolveReferenceIdentifiers(ref)['qualifier']
+    hr = NUISHEPDataRecord(ref)
+    xs = { x.name : x for x in hr.cross_section_measurements }
+    hdt = xs[table_name]
+
+    dv = hdt.dependent_variables[0]
+
+    if len(qual):
+      for v in hdt.dependent_variables:
+        if qual == v.name:
+          dv = v
+          break
+
+    for k,v in dv.quals.items():
+      if len(key):
+        if key == k:
+          rtn.append(v)
+          return rtn
+      else:
+        rtn.append(f"{k}:{v}")
+
+    return rtn
