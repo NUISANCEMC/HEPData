@@ -28,6 +28,9 @@ class NUISHEPDataFluxTable:
 
       self.quals = { x["name"]: x["value"] for x in depvar["qualifiers"] }
 
+      if "variable_type" not in self.quals:
+        raise RuntimeError(str(f"Missing variable_type qualifier value for NUISHEPDataFluxTable read from {self.resource_path}"))        
+
       self.variable_type = self.quals["variable_type"]
 
       if self.variable_type not in [ "probe_flux" ]:

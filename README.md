@@ -160,22 +160,24 @@ Selection functions return an integer, which can be used with a composite measur
 
 For the majority of published data, a measurement will take the form of a scattering cross section. There are a number of historic conventions for the units and additional target material scale factors used in published cross section measurements. To avoid clumsy parsing of the HEPData units variable metadata, the explicit units for the measured cross section should also be declared in a fixed form in `cross_section_units` _Qualifier_. The value of the qualifier takes the form of `|`-separated 'flags', at most one from each grouping shown in the table below.
 
+For consistency, we follow the NuHepMC reserved keywords for the Unit and the Target scales defined in [G.C.4](https://arxiv.org/pdf/2310.13211#page=6), but add the `PerTargetNeutron` and `PerTargetProton` options to support existing measurements.
+
 | Value                       | Comments |
 | --------------------------- | -------- |
-| **Prefix Factor** | |
+| **Unit** | |
 | `cm2`  | A common unit for cross-section measurements that requires us to carry around a power-of-ten scale factor that is dangerously close to the [minimum value](https://en.wikipedia.org/wiki/Single-precision_floating-point_format) representable by single precision IEEE 754 floating point numbers. |
-| `1E-38cm2` | Tries to avoid the 1E-38 factor by including it in the unit definition. |
+| `1e-38 cm2` | Tries to avoid the 1E-38 factor by including it in the unit definition. |
 | `pb` | 1 pb = 1E-36 cm2 |
-| `nb`  | 1 pb = 1E-33 cm2 |
+| `nb`  | 1 nb = 1E-33 cm2 |
 | **Target Scaling** | |
-| `per_target` | Include no explicit additional scaling on the total rate for calculated neutrino--target interactions. This will often correspond to a cross section per elemental nucleus, such as carbon. It also covers simple elemental ratios commonly used for hydrocarbon targets, such as CH, CH2, or CH4. It can also be used for more complex molecular targets. |
-| `per_nucleon` | Existing neutrino-scattering simulations often report the cross-section per target nucleon and the neutrino--nucleon interaction is considered the dominant fundamental process. |
-| `per_neutron` | Some data reports the cross section per 'active' nucleon, which for neutrino CCQE interactions with nuclei consists only of the bound neutrons. |
-| `per_proton`  | As for `per_neutron` but for processes that can only occur with target protons. |
+| `PerTarget` | Include no explicit additional scaling on the total rate for calculated neutrino--target interactions. This will often correspond to a cross section per elemental nucleus, such as carbon. It also covers simple elemental combinations commonly used for hydrocarbon targets, such as CH, CH2, or CH4. It can also be used for more complex molecular targets. |
+| `PerTargetNucleon` | Existing neutrino-scattering simulations often report the cross-section per target nucleon and the neutrino--nucleon interaction is considered the dominant fundamental process. |
+| `PerTargetNeutron` | Some data reports the cross section per 'active' nucleon, which for neutrino CCQE interactions with nuclei consists only of the bound neutrons. |
+| `PerTargetProton`  | As for `PerTargetNeutron` but for processes that can only occur with target protons. |
 | **Density Scaling** | |
 | `per_bin_width` | Include no explicit additional scaling on the total rate for calculated neutrino--target interactions. This will often correspond to a cross section per elemental nucleus, such as carbon. It also covers simple elemental ratios commonly used for hydrocarbon targets, such as CH, CH2, or CH4. It can also be used for more complex molecular targets. |
 
-The assumed, or default, value for this qualifier, following the majority of published data, is `cross_section_units=1E-38cm2|per_target|per_bin_width`
+The assumed, or default, value for this qualifier, following the majority of published data, is `cross_section_units=1E-38 cm2|PerTarget|per_bin_width`
 
 ### 2.4 Target Specification Qualifiers
 
