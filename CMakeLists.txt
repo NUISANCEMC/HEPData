@@ -1,0 +1,223 @@
+################################################################################
+# MIT License
+
+# Copyright (c) 2024 NUISANCE/HEPData
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+################################################################################
+
+cmake_minimum_required (VERSION 3.17 FATAL_ERROR)
+
+#Use the compilers found in the path
+find_program(CMAKE_C_COMPILER NAMES $ENV{CC} gcc PATHS ENV PATH NO_DEFAULT_PATH)
+find_program(CMAKE_CXX_COMPILER NAMES $ENV{CXX} g++ PATHS ENV PATH NO_DEFAULT_PATH)
+
+SET(NUISANCEHEPData_VERSION 0.9.0)
+project(NUISANCEHEPData VERSION ${NUISANCEHEPData_VERSION} LANGUAGES CXX C)
+
+# The specification version used in this repo
+SET(NuHepMC_VERSION_MAJOR  0)
+SET(NuHepMC_VERSION_MINOR  9)
+SET(NuHepMC_VERSION_PATCH  0)
+
+set(CMAKE_CXX_STANDARD 17)
+
+option(NUISANCEHEPData_PYTHON_ENABLED "Whether to build python bindings" OFF)
+option(NUISANCEHEPData_ENABLE_TESTS "Whether to enable test suite" OFF)
+option(NUISANCEHEPData_ENABLE_SANITIZERS_CLI "Whether to enable ASAN LSAN and UBSAN" OFF)
+option(NUISANCEHEPData_ENABLE_GCOV_CLI "Whether to enable GCOV" OFF)
+
+if(NUISANCEHEPData_ENABLE_TESTS)
+    SET(NUISANCEHEPData_ENABLE_SANITIZERS ON)
+    SET(NUISANCEHEPData_ENABLE_GCOV ON)
+else()
+  if(NUISANCEHEPData_ENABLE_SANITIZERS_CLI)
+    SET(NUISANCEHEPData_ENABLE_SANITIZERS ON)
+  endif()
+  if(NUISANCEHEPData_ENABLE_GCOV_CLI)
+    SET(NUISANCEHEPData_ENABLE_GCOV ON)
+  endif()
+endif()
+
+#Changes default install path to be a subdirectory of the build dir.
+#Can set build dir at configure time with -DCMAKE_INSTALL_PREFIX=/install/path
+if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
+  if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+      set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/${CMAKE_SYSTEM_NAME}/"
+             CACHE PATH "default install path" FORCE)
+  endif()
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "")
+  set(CMAKE_BUILD_TYPE RelWithDebInfo)
+elseif(NOT DEFINED CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE RelWithDebInfo)
+endif()
+
+LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake/Modules)
+
+#### RPATH handling #####
+
+set(CMAKE_MACOSX_RPATH 1)
+
+# use, i.e. don't skip the full RPATH for the build tree
+SET(CMAKE_SKIP_BUILD_RPATH  FALSE)
+
+# when building, don't use the install RPATH already
+# (but later on when installing)
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+
+SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+
+# add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+# the RPATH to be used when installing, but only if it's not a system directory
+LIST(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}" isSystemDir)
+IF("${isSystemDir}" STREQUAL "-1")
+   SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+ENDIF("${isSystemDir}" STREQUAL "-1")
+
+######################### Dependencies
+
+add_library(nuishpd_private_compile_options INTERFACE)
+target_compile_options(nuishpd_private_compile_options INTERFACE -Wall -Werror -Wextra)
+if(NOT CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$")
+    target_compile_options(nuishpd_private_compile_options INTERFACE -Wno-class-memaccess)
+endif()
+
+add_library(nuishpd_options INTERFACE)
+
+if(NUISANCEHEPData_ENABLE_SANITIZERS)
+  target_compile_options(nuishpd_options BEFORE INTERFACE -fno-omit-frame-pointer -fsanitize=address -fsanitize=leak -fsanitize=undefined)
+  target_link_options(nuishpd_options BEFORE INTERFACE -fsanitize=address -fsanitize=leak -fsanitize=undefined)
+endif()
+
+if(NUISANCEHEPData_ENABLE_GCOV)
+  target_compile_options(nuishpd_options BEFORE INTERFACE -fprofile-arcs -ftest-coverage)
+  target_link_options(nuishpd_options BEFORE INTERFACE -fprofile-arcs -ftest-coverage)
+endif()
+
+target_include_directories(nuishpd_options INTERFACE 
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>
+  $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include> 
+  $<INSTALL_INTERFACE:include>)
+
+set_target_properties(nuishpd_options PROPERTIES EXPORT_NAME Options)
+install(TARGETS nuishpd_options
+    EXPORT NUISANCEHEPData-targets)
+
+add_library(NUISANCEHEPData::Options ALIAS nuishpd_options)
+
+include(CPM)
+CPMFindPackage(
+    NAME pybind11
+    VERSION 2.9.2
+    GITHUB_REPOSITORY pybind/pybind11
+    GIT_TAG "v2.9.2"
+)
+
+CPMFindPackage(
+    NAME fmt
+    GIT_TAG 8.1.1
+    GITHUB_REPOSITORY fmtlib/fmt
+    OPTIONS "FMT_INSTALL ON"
+)
+
+CPMFindPackage(
+    NAME cpr
+    VERSION 1.10.5
+    GITHUB_REPOSITORY libcpr/cpr
+    GIT_TAG "1.10.5"
+)
+
+CPMFindPackage(
+    NAME yaml-cpp
+    VERSION 0.8.0
+    GITHUB_REPOSITORY "jbeder/yaml-cpp"
+    GIT_TAG "0.8.0"
+    OPTIONS "YAML_CPP_INSTALL ON"
+            "YAML_CPP_BUILD_TESTS OFF"
+            "YAML_CPP_BUILD_CONTRIB OFF"
+            "YAML_BUILD_SHARED_LIBS ON"
+)
+
+CPMAddPackage(
+    NAME spdlog
+    VERSION 1.10.0
+    GIT_TAG v1.10.0
+    GITHUB_REPOSITORY gabime/spdlog
+    OPTIONS
+        "SPDLOG_COMPILED_LIB ON"
+        "SPDLOG_BUILD_SHARED ON"
+        "SPDLOG_INSTALL ON"
+)
+
+if(NUISANCEHEPData_PYTHON_ENABLED)
+  find_package(Python3 REQUIRED)
+endif()
+
+
+add_subdirectory(src/nuis)
+
+if(NUISANCEHEPData_PYTHON_ENABLED)
+  # PYTHON PATHS
+  set(NUISANCEHEPData_PYSITEARCH "${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}")
+  set(NUISANCEHEPData_PYTHONPATH "python/${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}")
+
+  # add_subdirectory(python)
+endif()
+
+install(EXPORT NUISANCEHEPData-targets
+  FILE NUISANCEHEPDataTargets.cmake
+  NAMESPACE NUISANCEHEPData::
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/NUISANCEHEPData
+)
+
+# include(CMakePackageConfigHelpers)
+# configure_package_config_file(
+#   ${CMAKE_CURRENT_LIST_DIR}/cmake/Templates/NUISANCEHEPDataConfig.cmake.in 
+#   ${CMAKE_BINARY_DIR}/NUISANCEHEPDataConfig.cmake
+#   INSTALL_DESTINATION 
+#     /this/is/ignored/for/some/reason/thanks/kitware
+#   NO_SET_AND_CHECK_MACRO
+#   NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+
+# write_basic_package_version_file(
+#   ${CMAKE_BINARY_DIR}/NUISANCEHEPDataConfigVersion.cmake
+#   VERSION ${NUISANCEHEPData_VERSION}
+#   COMPATIBILITY AnyNewerVersion)
+
+# install(FILES 
+#     ${CMAKE_BINARY_DIR}/NUISANCEHEPDataConfig.cmake 
+#     ${CMAKE_BINARY_DIR}/NUISANCEHEPDataConfigVersion.cmake 
+#   DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/NUISANCEHEPData)
+
+if(NUISANCEHEPData_ENABLE_TESTS)
+
+  CPMAddPackage("gh:catchorg/Catch2@3.3.2")
+
+  LIST(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/extras)
+
+  include(CTest)
+  include(Catch)
+
+  add_subdirectory(tests)
+endif()
