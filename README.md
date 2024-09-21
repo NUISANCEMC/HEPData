@@ -113,7 +113,7 @@ Some specific examples with explanations are given below:
 | Qualifier Key   | Required | Example Value |
 | --------------- | -------- | ------------- |
 | `variable_type` | Yes      | `error_table` |
-| `error_type`    | Yes      | `covariance`, `correlation` |
+| `error_type`    | Yes      | `covariance`, `correlation`, `universes` |
 
 * Smearing table qualifiers
 
@@ -277,6 +277,7 @@ The only _Qualifier_ currently specified for error matrices is `error_type`, and
 | `inverse_covariance` | A pre-inverted absolute covariance. Sometimes error estimation can produce ill-conditioned or difficult to invert matrices and it can be useful for measurements to supply pre-inverted matrices for use in defining test statistics. |
 | `fractional_covariance` | A fractional covariance. The **fractional** error on the corresponding bin can be found by simply square rooting the value. |
 | `correlation` | A correlation matrix. If a correlation matrix is provided, it will usually be converted back to a covariance matrix by assuming the errors provided on the data tables correspond to the standard error on each bin. In this case, the error component `total`, will be used. If no `total` error component can be found on the corresponding table, this should be considered an error. |
+| `universes` | A table with one dependent variable per statistical/systematic universe |
 
 While Error tables should use the same format as data tables, the yaml file for the table can be included as an additional resource on the record or on the corresponding measurement table. The file size limits differ for tables and additional resources and covariance matrices of many-binned measurements can be quite large as an uncompressed yaml file.
 
