@@ -63,19 +63,43 @@ std::ostream &operator<<(std::ostream &os, HEPDataProbeFlux const &pf) {
 }
 
 std::ostream &operator<<(std::ostream &os,
+                         HEPDataCrossSectionMeasurement::funcref const &fref) {
+  return os << "{" << fref.fname << " from " << fref.source << "}";
+}
+
+std::ostream &operator<<(std::ostream &os,
                          HEPDataCrossSectionMeasurement const &measurement) {
 
   os << "---\nprobe fluxes:\n";
-  for (auto const &pf : measurement.probe_fluxes) {
-    os << pf << "\n---\n";
+  for (auto const &pfs : measurement.probe_fluxes) {
+    for (auto const &pf : pfs) {
+      os << "\n+++\n";
+      os << "  weight: " << pf.weight << "\n  " << (*pf) << "\n+++\n";
+      os << "\n+++\n";
+    }
+    os << "\n---\n";
   }
 
-  os << "target: " << measurement.target << "\n";
-  os << "selection function: " << measurement.selectfunc.str() << "\n";
+  os << "---\ntargets:\n";
+  for (auto const &tgts : measurement.targets) {
+    for (auto const &tgt : tgts) {
+      os << "  weight: " << tgt.weight << ", target: " << (*tgt) << "\n+++\n";
+    }
+    os << "\n---\n";
+  }
+
+  os << "selection functions: \n";
+  for (auto const &sf : measurement.selectfuncs) {
+    os << "  " << sf << "\n";
+  }
+
   os << "projectfuncs:" << "\n";
-  for (size_t i = 0; i < measurement.independent_vars.size(); ++i) {
-    os << "  " << measurement.independent_vars[i].name << ": "
-       << measurement.projectfuncs[i].str() << "\n";
+  for (size_t i = 0; i < measurement.projectfuncs.size(); ++i) {
+    os << "  ---[" << i << "]:\n";
+    for (size_t j = 0; j < measurement.independent_vars.size(); ++j) {
+      os << "    " << measurement.independent_vars[j].name << ": "
+         << measurement.projectfuncs[i][j] << "\n";
+    }
   }
 
   os << static_cast<HEPDataTable const &>(measurement);

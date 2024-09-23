@@ -66,6 +66,8 @@ Some specific examples with explanations are given below:
 | --------------------------- | -------- |
 | `MyCrossSection`            | Refers to a table named `MyCrossSection` in the current HEPData record. |
 | `12345/MyCrossSection`      | Refers to a table named `MyCrossSection` in HEPData record `12345`. |
+| `inspirehep:123/MyCrossSection` | Refers to a table named `MyCrossSection` in HEPData record with INSPIREHPE id `123`. |
+| `hepdata-sandbox:678910/MyCrossSection` | Refers to a table named `MyCrossSection` in HEPData Sandbox record `678910`. |
 | `12345/MyCrossSection:Bkg`  | Refers specifically to the `Bkg` _Dependent Variable_ of table `MyCrossSection` in HEPData record `12345`. |
 | `12345/moredata.yaml`       | Refers to an _Additional Resource_ file, named `moredata.yaml` in HEPData record `12345`. |
 | `12345/flux.root:flux_numu` | Refers to a specific object (in this case a histogram) named `flux_numu` in the _Additional Resource_ file `flux.root` in HEPData record `12345`. |

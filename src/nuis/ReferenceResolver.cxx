@@ -131,12 +131,12 @@ ensure_local_path(ResourceReference const &ref,
   }
   std::filesystem::remove(download_location);
 
-  if (std::filesystem::exists(expected_location)) {
-    throw std::runtime_error(
-        fmt::format("After fetching and unpacking the response from {}, could "
-                    "not find expected file {}.",
-                    Endpoint.str(), expected_location.native()));
-  }
+  // if (std::filesystem::exists(expected_location)) {
+  //   throw std::runtime_error(
+  //       fmt::format("After fetching and unpacking the response from {}, could "
+  //                   "not find expected file {}.",
+  //                   Endpoint.str(), expected_location.native()));
+  // }
 
   spdlog::info("  resolved to: {}", expected_location.native());
 

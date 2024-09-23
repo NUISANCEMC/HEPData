@@ -4,7 +4,8 @@ set(HEADERS
 
 set(IMPLEMENTATION 
   ResourceReference.cxx
-  ReferenceResolver.cxx)
+  ReferenceResolver.cxx
+  HEPDataTableFactory.cxx)
 
 add_library(nuishpd SHARED ${IMPLEMENTATION})
 target_link_libraries(nuishpd PUBLIC NUISANCEHEPData::Options yaml-cpp::yaml-cpp)
