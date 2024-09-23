@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nuis/HEPDataRecord.hxx"
+#include "nuis/HEPData/HEPDataRecord.hxx"
 
 #include "fmt/core.h"
 

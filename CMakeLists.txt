@@ -103,17 +103,17 @@ if(NOT CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$")
     target_compile_options(nuishpd_private_compile_options INTERFACE -Wno-class-memaccess)
 endif()
 
-add_library(nuishpd_options INTERFACE)
-
 if(NUISANCEHEPData_ENABLE_SANITIZERS)
-  target_compile_options(nuishpd_options BEFORE INTERFACE -fno-omit-frame-pointer -fsanitize=address -fsanitize=leak -fsanitize=undefined)
-  target_link_options(nuishpd_options BEFORE INTERFACE -fsanitize=address -fsanitize=leak -fsanitize=undefined)
+  target_compile_options(nuishpd_private_compile_options BEFORE INTERFACE -fno-omit-frame-pointer -fsanitize=address -fsanitize=leak -fsanitize=undefined)
+  target_link_options(nuishpd_private_compile_options BEFORE INTERFACE -fsanitize=address -fsanitize=leak -fsanitize=undefined)
 endif()
 
 if(NUISANCEHEPData_ENABLE_GCOV)
-  target_compile_options(nuishpd_options BEFORE INTERFACE -fprofile-arcs -ftest-coverage)
-  target_link_options(nuishpd_options BEFORE INTERFACE -fprofile-arcs -ftest-coverage)
+  target_compile_options(nuishpd_private_compile_options BEFORE INTERFACE -fprofile-arcs -ftest-coverage)
+  target_link_options(nuishpd_private_compile_options BEFORE INTERFACE -fprofile-arcs -ftest-coverage)
 endif()
+
+add_library(nuishpd_options INTERFACE)
 
 target_include_directories(nuishpd_options INTERFACE 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>
@@ -148,6 +148,10 @@ CPMFindPackage(
     GIT_TAG "1.10.5"
 )
 
+# cpr doesn't include its own export set, add it to ours
+install(TARGETS cpr
+        EXPORT NUISANCEHEPData-targets)
+
 CPMFindPackage(
     NAME yaml-cpp
     VERSION 0.8.0
@@ -170,19 +174,27 @@ CPMAddPackage(
         "SPDLOG_INSTALL ON"
 )
 
+CPMAddPackage(
+    NAME docopt
+    GIT_TAG v0.6.3
+    GITHUB_REPOSITORY docopt/docopt.cpp
+)
+add_library(docopt::docopt ALIAS docopt)
+
 if(NUISANCEHEPData_PYTHON_ENABLED)
   find_package(Python3 REQUIRED)
 endif()
 
 
-add_subdirectory(src/nuis)
+add_subdirectory(src/nuis/HEPData)
+add_subdirectory(app)
 
 if(NUISANCEHEPData_PYTHON_ENABLED)
   # PYTHON PATHS
   set(NUISANCEHEPData_PYSITEARCH "${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}")
   set(NUISANCEHEPData_PYTHONPATH "python/${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}")
 
-  # add_subdirectory(python)
+  add_subdirectory(python)
 endif()
 
 install(EXPORT NUISANCEHEPData-targets
@@ -191,24 +203,24 @@ install(EXPORT NUISANCEHEPData-targets
   DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/NUISANCEHEPData
 )
 
-# include(CMakePackageConfigHelpers)
-# configure_package_config_file(
-#   ${CMAKE_CURRENT_LIST_DIR}/cmake/Templates/NUISANCEHEPDataConfig.cmake.in 
-#   ${CMAKE_BINARY_DIR}/NUISANCEHEPDataConfig.cmake
-#   INSTALL_DESTINATION 
-#     /this/is/ignored/for/some/reason/thanks/kitware
-#   NO_SET_AND_CHECK_MACRO
-#   NO_CHECK_REQUIRED_COMPONENTS_MACRO)
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+  ${CMAKE_CURRENT_LIST_DIR}/cmake/Templates/NUISANCEHEPDataConfig.cmake.in 
+  ${CMAKE_BINARY_DIR}/NUISANCEHEPDataConfig.cmake
+  INSTALL_DESTINATION 
+    /this/is/ignored/for/some/reason/thanks/kitware
+  NO_SET_AND_CHECK_MACRO
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO)
 
-# write_basic_package_version_file(
-#   ${CMAKE_BINARY_DIR}/NUISANCEHEPDataConfigVersion.cmake
-#   VERSION ${NUISANCEHEPData_VERSION}
-#   COMPATIBILITY AnyNewerVersion)
+write_basic_package_version_file(
+  ${CMAKE_BINARY_DIR}/NUISANCEHEPDataConfigVersion.cmake
+  VERSION ${NUISANCEHEPData_VERSION}
+  COMPATIBILITY AnyNewerVersion)
 
-# install(FILES 
-#     ${CMAKE_BINARY_DIR}/NUISANCEHEPDataConfig.cmake 
-#     ${CMAKE_BINARY_DIR}/NUISANCEHEPDataConfigVersion.cmake 
-#   DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/NUISANCEHEPData)
+install(FILES 
+    ${CMAKE_BINARY_DIR}/NUISANCEHEPDataConfig.cmake 
+    ${CMAKE_BINARY_DIR}/NUISANCEHEPDataConfigVersion.cmake 
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/NUISANCEHEPData)
 
 if(NUISANCEHEPData_ENABLE_TESTS)
 

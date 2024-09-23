@@ -1,4 +1,4 @@
-#include "nuis/ResourceReference.hxx"
+#include "nuis/HEPData/ResourceReference.hxx"
 
 #include "fmt/core.h"
 
@@ -162,6 +162,22 @@ std::string ResourceReference::str() const {
   }
 
   return ss.str();
+}
+
+std::string ResourceReference::component(std::string const &comp) const {
+  if ((comp == "reftype") || (comp == "type")) {
+    return reftype;
+  } else if ((comp == "recordid") || (comp == "id")) {
+    return std::to_string(recordid);
+  } else if ((comp == "recordvers") || (comp == "versions")) {
+    return std::to_string(recordvers);
+  } else if ((comp == "resourcename") || (comp == "resource")) {
+    return resourcename;
+  } else if (comp == "qualifier") {
+    return qualifier;
+  }
+  throw std::runtime_error(
+      fmt::format("Invalid reference component requested: {}", comp));
 }
 
 } // namespace nuis

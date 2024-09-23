@@ -1,8 +1,8 @@
-#include "nuis/HEPDataTables.hxx"
+#include "nuis/HEPData/HEPDataTables.hxx"
 
-#include "nuis/ReferenceResolver.hxx"
+#include "nuis/HEPData/ReferenceResolver.hxx"
 
-#include "nuis/YAMLConverters.hxx"
+#include "nuis/HEPData/YAMLConverters.hxx"
 
 #include "fmt/core.h"
 #include "fmt/ranges.h"
@@ -10,12 +10,14 @@
 namespace nuis {
 
 HEPDataProbeFlux
-make_HEPDataProbeFlux(ResourceReference const &ref,
+make_HEPDataProbeFlux(ResourceReference ref,
                       std::filesystem::path const &local_cache_root) {
-  auto tbl = YAML::LoadFile(resolve_reference(ref, local_cache_root))
-                 .as<HEPDataTable>();
+
+  auto source = resolve_reference(ref, local_cache_root);
+  auto tbl = YAML::LoadFile(source).as<HEPDataTable>();
 
   HEPDataProbeFlux obj;
+  obj.source = source;
 
   for (auto const &dv : tbl.dependent_vars) {
 
@@ -50,12 +52,14 @@ make_HEPDataProbeFlux(ResourceReference const &ref,
 }
 
 HEPDataErrorTable
-make_HEPDataErrorTable(ResourceReference const &ref,
+make_HEPDataErrorTable(ResourceReference ref,
                        std::filesystem::path const &local_cache_root) {
-  auto tbl = YAML::LoadFile(resolve_reference(ref, local_cache_root))
-                 .as<HEPDataTable>();
+
+  auto source = resolve_reference(ref, local_cache_root);
+  auto tbl = YAML::LoadFile(source).as<HEPDataTable>();
 
   HEPDataErrorTable obj;
+  obj.source = source;
 
   for (auto const &dv : tbl.dependent_vars) {
 
@@ -134,7 +138,7 @@ std::pair<std::string, double> parse_weight_specifier(std::string specstring) {
 }
 
 std::vector<HEPDataCrossSectionMeasurement::Weighted<HEPDataProbeFlux>>
-parse_probe_fluxes(std::string fluxsstr, ResourceReference const &ref,
+parse_probe_fluxes(std::string fluxsstr, ResourceReference ref,
                    std::filesystem::path const &local_cache_root) {
 
   std::vector<HEPDataCrossSectionMeasurement::Weighted<HEPDataProbeFlux>>
@@ -152,7 +156,7 @@ parse_probe_fluxes(std::string fluxsstr, ResourceReference const &ref,
 }
 
 HEPDataCrossSectionMeasurement::funcref
-make_funcref(ResourceReference const &ref,
+make_funcref(ResourceReference ref,
              std::filesystem::path const &local_cache_root) {
 
   HEPDataCrossSectionMeasurement::funcref fref{
@@ -219,12 +223,13 @@ std::vector<std::string> get_indexed_qualifier_values(
 }
 
 HEPDataCrossSectionMeasurement make_HEPDataCrossSectionMeasurement(
-    ResourceReference const &ref,
-    std::filesystem::path const &local_cache_root) {
-  auto tbl = YAML::LoadFile(resolve_reference(ref, local_cache_root))
-                 .as<HEPDataTable>();
+    ResourceReference ref, std::filesystem::path const &local_cache_root) {
+
+  auto source = resolve_reference(ref, local_cache_root);
+  auto tbl = YAML::LoadFile(source).as<HEPDataTable>();
 
   HEPDataCrossSectionMeasurement obj;
+  obj.source = source;
 
   for (auto const &dv : tbl.dependent_vars) {
 
@@ -300,9 +305,11 @@ HEPDataCrossSectionMeasurement make_HEPDataCrossSectionMeasurement(
 }
 
 HEPDataRecord
-make_HEPDataRecord(ResourceReference const &ref,
+make_HEPDataRecord(ResourceReference ref,
                    std::filesystem::path const &local_cache_root) {
   HEPDataRecord obj;
+
+  ref = resolve_version(ref);
 
   obj.record_ref = ref.record_ref();
   auto submission = resolve_reference(obj.record_ref, local_cache_root);
@@ -329,6 +336,14 @@ make_HEPDataRecord(ResourceReference const &ref,
                               doc["data_file"].as<std::string>() + ":" +
                               dv.name),
             local_cache_root));
+      }
+    }
+
+    for (auto const &addres : doc["additional_resources"]) {
+      auto expected_location =
+          obj.record_root / addres["location"].as<std::string>();
+      if (std::filesystem::exists(expected_location)) {
+        obj.additional_resources.push_back(expected_location);
       }
     }
   }

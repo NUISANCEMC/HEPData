@@ -1,11 +1,12 @@
 #pragma once
 
-#include "nuis/HEPDataVariables.hxx"
+#include "nuis/HEPData/HEPDataVariables.hxx"
 
 #include <filesystem>
 
 namespace nuis {
 struct HEPDataTable {
+  std::filesystem::path source;
   std::vector<HEPDataVariable> independent_vars;
   std::vector<HEPDataDependentVariable> dependent_vars;
 };

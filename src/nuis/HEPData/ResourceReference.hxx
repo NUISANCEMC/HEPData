@@ -35,6 +35,7 @@ struct ResourceReference {
   ResourceReference record_ref() const;
 
   std::string str() const;
+  std::string component(std::string const &comp) const;
 };
 
 extern ResourceReference const HEPDataRef;

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "nuis/HEPDataTables.hxx"
+#include "nuis/HEPData/HEPDataTables.hxx"
 
-#include "nuis/ResourceReference.hxx"
+#include "nuis/HEPData/ResourceReference.hxx"
 
 #include <filesystem>
 #include <iostream>
@@ -14,6 +14,7 @@ struct HEPDataRecord {
   ResourceReference record_ref;
 
   std::vector<HEPDataCrossSectionMeasurement> measurements;
+  std::vector<std::filesystem::path> additional_resources;
 
 };
 } // namespace nuis

@@ -1,10 +1,12 @@
 #pragma once
 
-#include "nuis/ResourceReference.hxx"
+#include "nuis/HEPData/ResourceReference.hxx"
 
 #include <filesystem>
 
 namespace nuis {
+
+ResourceReference resolve_version(ResourceReference ref);
 
 std::filesystem::path
 resolve_reference(ResourceReference const &ref,

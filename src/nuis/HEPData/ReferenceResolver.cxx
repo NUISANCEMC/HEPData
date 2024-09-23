@@ -1,4 +1,4 @@
-#include "nuis/ReferenceResolver.hxx"
+#include "nuis/HEPData/ReferenceResolver.hxx"
 
 #include "cpr/cpr.h"
 
@@ -69,8 +69,10 @@ ensure_local_path(ResourceReference const &ref,
   auto expected_location =
       get_expected_resource_location(ref, local_cache_root);
 
-  spdlog::info("ensure_local_path({},{}): expected_location = {}", ref.str(),
-               local_cache_root.native(), expected_location.native());
+  spdlog::debug("ensure_local_path(ref={},local_cache_root={}): "
+                "expected_location = {}[.yaml]",
+                ref.str(), local_cache_root.native(),
+                expected_location.native());
 
   if (std::filesystem::exists(expected_location)) {
     return expected_location;
@@ -100,13 +102,13 @@ ensure_local_path(ResourceReference const &ref,
 
   cpr::Url Endpoint = get_record_endpoint(ref);
 
-  spdlog::info("Doesn't exist, downloading...");
-  spdlog::info("  GET {} -> {} ", Endpoint.str(), download_location.native());
+  spdlog::debug("Doesn't exist, downloading...");
+  spdlog::debug("  GET {} -> {} ", Endpoint.str(), download_location.native());
 
   cpr::Response r =
       cpr::Download(of, Endpoint, cpr::Parameters{{"format", "original"}});
 
-  spdlog::info("   --> {} ", r.status_code);
+  spdlog::debug("   http response --> {} ", r.status_code);
 
   if (r.status_code != 200) {
     throw std::runtime_error(
@@ -119,10 +121,15 @@ ensure_local_path(ResourceReference const &ref,
         r.header["content-type"]));
   }
 
-  auto unzip_command =
-      fmt::format("cd {} && unzip submission.zip", download_dir.native());
+  std::string redir = "&>/dev/null";
+  if (spdlog::get_level() >= spdlog::level::debug) {
+    redir = "";
+  }
 
-  spdlog::info("  unzipping: system({})", unzip_command);
+  auto unzip_command = fmt::format("cd {} && unzip submission.zip {}",
+                                   download_dir.native(), redir);
+
+  spdlog::debug("  unzipping: system({})", unzip_command);
 
   auto errc = std::system(unzip_command.c_str());
   if (errc) {
@@ -131,36 +138,22 @@ ensure_local_path(ResourceReference const &ref,
   }
   std::filesystem::remove(download_location);
 
-  // if (std::filesystem::exists(expected_location)) {
-  //   throw std::runtime_error(
-  //       fmt::format("After fetching and unpacking the response from {}, could "
-  //                   "not find expected file {}.",
-  //                   Endpoint.str(), expected_location.native()));
-  // }
-
-  spdlog::info("  resolved to: {}", expected_location.native());
+  spdlog::debug("  resolved to: {}", expected_location.native());
 
   return expected_location;
 }
 
-std::filesystem::path
-resolve_reference_HEPData(ResourceReference ref,
-                          std::filesystem::path const &local_cache_root) {
-
-  if (ref.reftype == "inspirehep") {
-    return ensure_local_path(ref, local_cache_root);
-  }
-
+ResourceReference resolve_version(ResourceReference ref) {
   if (!ref.recordvers) { // unqualified version, check what the latest version
                          // is
     cpr::Url Endpoint = get_record_endpoint(ref);
 
-    spdlog::info("Checking latest version for {}", ref.str());
-    spdlog::info("  GET {}", Endpoint.str());
+    spdlog::debug("Checking latest version for unversioned ref={}", ref.str());
+    spdlog::debug("  GET {}", Endpoint.str());
 
     cpr::Response r = cpr::Get(Endpoint, cpr::Parameters{{"format", "json"}});
 
-    spdlog::info("   --> {} ", r.status_code);
+    spdlog::debug("   http response --> {} ", r.status_code);
 
     if (r.status_code != 200) {
       throw std::runtime_error(
@@ -176,9 +169,22 @@ resolve_reference_HEPData(ResourceReference ref,
     auto respdoc = YAML::Load(r.text);
 
     ref.recordvers = respdoc["version"].as<int>();
-    spdlog::info("  resolved reference with concrete version to: {}",
-                 ref.str());
+    spdlog::debug("  resolved reference with concrete version to: {}",
+                  ref.str());
   }
+
+  return ref;
+}
+
+std::filesystem::path
+resolve_reference_HEPData(ResourceReference ref,
+                          std::filesystem::path const &local_cache_root) {
+
+  if (ref.reftype == "inspirehep") {
+    return ensure_local_path(ref, local_cache_root);
+  }
+
+  ref = resolve_version(ref);
 
   return ensure_local_path(ref, local_cache_root);
 }
@@ -187,8 +193,8 @@ std::filesystem::path
 resolve_reference(ResourceReference const &ref,
                   std::filesystem::path const &local_cache_root) {
 
-  spdlog::info("resolve_reference({},{})", ref.str(),
-               local_cache_root.native());
+  spdlog::trace("resolve_reference(ref={},local_cache_root={})", ref.str(),
+                local_cache_root.native());
 
   return resolve_reference_HEPData(ref, local_cache_root);
 }
