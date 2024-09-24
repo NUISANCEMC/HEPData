@@ -34,7 +34,10 @@ struct CrossSectionMeasurement : public Table {
   };
 
   std::string variable_type;
-
+  std::string measurement_type;
+  std::vector<std::string> cross_section_units;
+  std::string test_statistic;
+  
   std::vector<std::vector<Weighted<ProbeFlux>>> probe_fluxes;
   std::vector<std::vector<Weighted<std::string>>> targets;
   std::vector<ErrorTable> errors;

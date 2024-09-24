@@ -19,7 +19,7 @@ set(IMPLEMENTATION
 add_library(NUISANCEHEPData SHARED ${IMPLEMENTATION})
 target_link_libraries(NUISANCEHEPData PUBLIC NUISANCEHEPData::Options yaml-cpp::yaml-cpp)
 target_link_libraries(NUISANCEHEPData PRIVATE nuishpd_private_compile_options 
-  cpr::cpr fmt::fmt-header-only spdlog::spdlog)
+  cpr::cpr spdlog::spdlog fmt::fmt-header-only)
 set_target_properties(NUISANCEHEPData PROPERTIES 
   PUBLIC_HEADER "${HEADERS}"
   EXPORT_NAME All)

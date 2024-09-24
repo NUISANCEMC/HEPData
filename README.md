@@ -141,7 +141,7 @@ The `variable_type` qualifier is used to explicitly mark any _Dependent Variable
 
 ### 2.1 Measurement Type
 
-For each HEPData Table, one `measurement_type` _Qualifer_ **must** exist to signal how a prediction should be transformed before a comparison can be made
+For each HEPData Table, one `measurement_type` _Qualifer_ may exist to signal how a prediction should be transformed before a comparison can be made. If none exists, the measurement is assumed to be of default type, `flux_averaged_differential_cross_section`.
 
 | Value                       | Comments |
 | --------------------------- | -------- |

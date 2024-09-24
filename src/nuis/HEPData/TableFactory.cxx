@@ -105,15 +105,15 @@ ErrorTable make_ErrorTable(ResourceReference ref,
   return obj;
 }
 
-std::vector<std::string> split_spec(std::string specstring) {
+std::vector<std::string> split_spec(std::string specstring, char delim = ',') {
   std::vector<std::string> splits;
 
-  auto comma_pos = specstring.find_first_of(',');
+  auto comma_pos = specstring.find_first_of(delim);
 
   while (comma_pos != std::string::npos) {
     splits.push_back(specstring.substr(0, comma_pos));
     specstring = specstring.substr(comma_pos + 1);
-    comma_pos = specstring.find_first_of(',');
+    comma_pos = specstring.find_first_of(delim);
   }
 
   if (specstring.size()) {
@@ -306,6 +306,37 @@ make_CrossSectionMeasurement(ResourceReference ref,
     for (auto const &sub_ref : split_spec(quals.at("sub_measurements"))) {
       obj.sub_measurements.emplace_back(make_CrossSectionMeasurement(
           ResourceReference(sub_ref, ref), local_cache_root));
+    }
+  }
+
+  obj.measurement_type = "flux_averaged_differential_cross_section";
+  if (quals.count("measurement_type")) {
+    obj.measurement_type = quals.at("measurement_type");
+
+    static std::set<std::string> const valid_measurement_types = {
+        "flux_averaged_differential_cross_section", "event_rate", "ratio",
+        "total_cross_section"};
+    if (!valid_measurement_types.count(obj.measurement_type)) {
+      throw std::runtime_error(fmt::format(
+          "invalid measurement_type qualifier found: {}, valid types: {}",
+          obj.measurement_type, valid_measurement_types));
+    }
+  }
+
+  if (quals.count("cross_section_units")) {
+    obj.cross_section_units = split_spec(quals.at("cross_section_units"), '|');
+  }
+
+  obj.test_statistic = "chi2";
+  if (quals.count("test_statistic")) {
+    obj.test_statistic = quals.at("test_statistic");
+
+    static std::set<std::string> const valid_test_statistics = {
+        "chi2", "shape_only_chi2", "shape_plus_norm_chi2", "poisson_pdf"};
+    if (!valid_test_statistics.count(obj.test_statistic)) {
+      throw std::runtime_error(fmt::format(
+          "invalid test_statistic qualifier found: {}, valid types: {}",
+          obj.test_statistic, valid_test_statistics));
     }
   }
 
