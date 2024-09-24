@@ -87,18 +87,32 @@ ensure_local_path(ResourceReference const &ref,
     return expected_location_yaml;
   }
 
+  auto record_location = get_expected_record_location(ref, local_cache_root);
+
+  // if the submission exists, then it is likely that this resource is mispelled
+  if (std::filesystem::exists(record_location)) {
+    std::stringstream dir_contents;
+    for (auto const &dir_entry :
+         std::filesystem::directory_iterator{record_location}) {
+      dir_contents << "  " << dir_entry.path().native() << '\n';
+    }
+
+    throw std::runtime_error(fmt::format(
+        "Failed to resolve reference: {} to a file in the submission "
+        "directory: "
+        "{}, with contents:\n{}\n\nIs the resourcename, {}, correct?",
+        ref.str(), record_location.native(), dir_contents.str(),
+        ref.resourcename));
+  }
+
   if (ref.reftype == "inspirehep") {
     throw std::runtime_error(
         "Cannot yet fetch non-local inspirehep-type resources.");
   }
 
-  std::filesystem::path download_location =
-      fmt::format("{}/submission.zip",
-                  get_expected_record_location(ref, local_cache_root).native());
+  std::filesystem::path download_location = record_location / "submission.zip";
 
-  auto download_dir = download_location.parent_path();
-
-  std::filesystem::create_directories(download_dir);
+  std::filesystem::create_directories(record_location);
 
   std::ofstream of(download_location, std::ios::binary);
 
@@ -124,12 +138,13 @@ ensure_local_path(ResourceReference const &ref,
   }
 
   std::string redir = "&>/dev/null";
-  if (spdlog::get_level() >= spdlog::level::debug) {
+  std::cout << spdlog::get_level() << ", " << spdlog::level::debug << std::endl;
+  if (spdlog::get_level() <= spdlog::level::debug) {
     redir = "";
   }
 
   auto unzip_command = fmt::format("cd {} && unzip submission.zip {}",
-                                   download_dir.native(), redir);
+                                   record_location.native(), redir);
 
   spdlog::debug("  unzipping: system({})", unzip_command);
 
@@ -140,9 +155,29 @@ ensure_local_path(ResourceReference const &ref,
   }
   std::filesystem::remove(download_location);
 
-  spdlog::debug("  resolved to: {}", expected_location.native());
+  if (std::filesystem::exists(expected_location)) {
+    spdlog::debug("  resolved to: {}", expected_location.native());
+    return expected_location;
+  }
 
-  return expected_location;
+  // also check if the resource is the table name with a corresponding yaml file
+  if (std::filesystem::exists(expected_location_yaml)) {
+    spdlog::debug("  resolved to: {}", expected_location_yaml.native());
+    return expected_location_yaml;
+  }
+
+  std::stringstream dir_contents;
+  for (auto const &dir_entry :
+       std::filesystem::directory_iterator{record_location}) {
+    dir_contents << "  " << dir_entry.path().native() << '\n';
+  }
+
+  throw std::runtime_error(fmt::format(
+      "After downloading and unzipping, failed to resolve "
+      "reference: {} to a file in directory: {}, with contents:\n{}\n\nIs the "
+      "resourcename, {}, correct?",
+      ref.str(), record_location.native(), dir_contents.str(),
+      ref.resourcename));
 }
 
 ResourceReference resolve_version(ResourceReference ref) {

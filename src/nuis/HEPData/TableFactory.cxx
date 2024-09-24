@@ -302,6 +302,13 @@ make_CrossSectionMeasurement(ResourceReference ref,
         make_ErrorTable(ResourceReference(errors_spec, ref), local_cache_root));
   }
 
+  if (obj.is_composite && quals.count("sub_measurements")) {
+    for (auto const &sub_ref : split_spec(quals.at("sub_measurements"))) {
+      obj.sub_measurements.emplace_back(make_CrossSectionMeasurement(
+          ResourceReference(sub_ref, ref), local_cache_root));
+    }
+  }
+
   return obj;
 }
 
