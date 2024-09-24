@@ -5,27 +5,27 @@
 #include <variant>
 #include <vector>
 
-namespace nuis {
+namespace nuis::HEPData {
 
-struct HEPDataExtent {
+struct Extent {
   double low, high;
 };
 
-struct HEPDataValue {
-  std::variant<HEPDataExtent, double> value;
+struct Value {
+  std::variant<Extent, double> value;
   std::map<std::string, double> errors;
 };
 
-struct HEPDataVariable {
-  std::vector<HEPDataValue> values;
+struct Variable {
+  std::vector<Value> values;
 
   std::string name;
   std::string units;
 };
 
-struct HEPDataDependentVariable : public HEPDataVariable {
+struct DependentVariable : public Variable {
 
   std::map<std::string, std::string> qualifiers;
 };
 
-} // namespace nuis
+} // namespace nuis::HEPData

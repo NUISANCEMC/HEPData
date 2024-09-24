@@ -1,5 +1,5 @@
-#include "nuis/HEPData/HEPDataTableFactory.hxx"
 #include "nuis/HEPData/ReferenceResolver.hxx"
+#include "nuis/HEPData/TableFactory.hxx"
 #include "nuis/HEPData/YAMLConverters.hxx"
 
 #include "docopt.h"
@@ -7,6 +7,8 @@
 #include "fmt/core.h"
 
 #include "spdlog/spdlog.h"
+
+#include "yaml-cpp/yaml.h"
 
 #include <iostream>
 
@@ -34,7 +36,25 @@ static const char USAGE[] =
     <key> arguments correspond to a specific HEPData qualifier key to reference
 )";
 
-using namespace nuis;
+std::vector<std::string> split_spec(std::string specstring) {
+  std::vector<std::string> splits;
+
+  auto comma_pos = specstring.find_first_of(',');
+
+  while (comma_pos != std::string::npos) {
+    splits.push_back(specstring.substr(0, comma_pos));
+    specstring = specstring.substr(comma_pos + 1);
+    comma_pos = specstring.find_first_of(',');
+  }
+
+  if (specstring.size()) {
+    splits.push_back(specstring);
+  }
+
+  return splits;
+}
+
+using namespace nuis::HEPData;
 
 int main(int argc, const char **argv) {
   std::map<std::string, docopt::value> args =
@@ -71,8 +91,8 @@ int main(int argc, const char **argv) {
 
   if (args["get-cross-section-measurements"].asBool()) {
     for (auto const &measurement :
-         make_HEPDataRecord(ResourceReference(args["<ref>"].asString()),
-                            local_cache_root)
+         make_Record(ResourceReference(args["<ref>"].asString()),
+                     local_cache_root)
              .measurements) {
       std::cout << measurement.source.stem().native() << std::endl;
     }
@@ -91,7 +111,7 @@ int main(int argc, const char **argv) {
     auto tbl = YAML::LoadFile(resolve_reference(
                                   ResourceReference(args["<ref>"].asString()),
                                   local_cache_root))
-                   .as<HEPDataTable>();
+                   .as<Table>();
     for (auto const &ivar : tbl.independent_vars) {
       std::cout << ivar.name << std::endl;
     }
@@ -102,7 +122,7 @@ int main(int argc, const char **argv) {
     auto tbl = YAML::LoadFile(resolve_reference(
                                   ResourceReference(args["<ref>"].asString()),
                                   local_cache_root))
-                   .as<HEPDataTable>();
+                   .as<Table>();
     for (auto const &dvar : tbl.dependent_vars) {
       std::cout << dvar.name << std::endl;
     }
@@ -112,8 +132,8 @@ int main(int argc, const char **argv) {
   if (args["get-qualifiers"].asBool() ||
       args["dereference-to-local-path"].asBool()) {
     auto ref = ResourceReference(args["<ref>"].asString());
-    auto tbl = YAML::LoadFile(resolve_reference(ref, local_cache_root))
-                   .as<HEPDataTable>();
+    auto tbl =
+        YAML::LoadFile(resolve_reference(ref, local_cache_root)).as<Table>();
 
     decltype(tbl.dependent_vars.front().qualifiers) quals;
     for (auto const &dvar : tbl.dependent_vars) {
@@ -131,10 +151,12 @@ int main(int argc, const char **argv) {
       if (args["<key>"]) {
         if (args["<key>"].asString() == kvp.first) {
           if (args["dereference-to-local-path"].asBool()) {
-            std::cout << resolve_reference(ResourceReference(kvp.second, ref),
-                                           local_cache_root)
-                             .native()
-                      << std::endl;
+            for (auto const &el : split_spec(kvp.second)) {
+              std::cout << resolve_reference(ResourceReference(el, ref),
+                                             local_cache_root)
+                               .native()
+                        << std::endl;
+            }
             found = true;
           } else {
             std::cout << kvp.second << std::endl;
@@ -159,8 +181,8 @@ int main(int argc, const char **argv) {
 
   if (args["get-local-additional-resources"].asBool()) {
     for (auto const &addres :
-         make_HEPDataRecord(ResourceReference(args["<ref>"].asString()),
-                            local_cache_root)
+         make_Record(ResourceReference(args["<ref>"].asString()),
+                     local_cache_root)
              .additional_resources) {
       std::cout << addres.filename().native() << std::endl;
     }

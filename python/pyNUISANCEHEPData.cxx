@@ -1,10 +1,10 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 
-#include "nuis/HEPData/HEPDataTableFactory.hxx"
 #include "nuis/HEPData/ReferenceResolver.hxx"
 #include "nuis/HEPData/ResourceReference.hxx"
 #include "nuis/HEPData/StreamHelpers.hxx"
+#include "nuis/HEPData/TableFactory.hxx"
 
 namespace py = pybind11;
 using namespace nuis;
@@ -18,143 +18,154 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
            [](std::filesystem::path const &p) { return p.native(); });
   py::implicitly_convertible<std::string, std::filesystem::path>();
 
-  py::class_<HEPDataExtent>(m, "HEPDataExtent")
-      .def_readonly("low", &HEPDataExtent::low)
-      .def_readonly("high", &HEPDataExtent::high);
+  py::class_<HEPData::Extent>(m, "HEPData::Extent")
+      .def_readonly("low", &HEPData::Extent::low)
+      .def_readonly("high", &HEPData::Extent::high);
 
-  py::class_<HEPDataValue>(m, "HEPDataValue")
-      .def_readonly("value", &HEPDataValue::value)
-      .def_readonly("errors", &HEPDataValue::errors);
+  py::class_<HEPData::Value>(m, "HEPData::Value")
+      .def_readonly("value", &HEPData::Value::value)
+      .def_readonly("errors", &HEPData::Value::errors);
 
-  py::class_<HEPDataVariable>(m, "HEPDataVariable")
-      .def_readonly("values", &HEPDataVariable::values)
-      .def_readonly("name", &HEPDataVariable::name)
-      .def_readonly("units", &HEPDataVariable::units);
+  py::class_<HEPData::Variable>(m, "HEPData::Variable")
+      .def_readonly("values", &HEPData::Variable::values)
+      .def_readonly("name", &HEPData::Variable::name)
+      .def_readonly("units", &HEPData::Variable::units);
 
-  py::class_<HEPDataDependentVariable, HEPDataVariable>(
-      m, "HEPDataDependentVariable")
-      .def_readonly("qualifiers", &HEPDataDependentVariable::qualifiers);
+  py::class_<HEPData::DependentVariable, HEPData::Variable>(
+      m, "HEPData::DependentVariable")
+      .def_readonly("qualifiers", &HEPData::DependentVariable::qualifiers);
 
-  py::class_<HEPDataTable>(m, "HEPDataTable")
-      .def_readonly("source", &HEPDataTable::source)
-      .def_readonly("independent_vars", &HEPDataTable::independent_vars)
-      .def_readonly("dependent_vars", &HEPDataTable::dependent_vars)
-      .def("__str__", [](HEPDataTable const &hpd) {
+  py::class_<HEPData::Table>(m, "HEPData::Table")
+      .def_readonly("source", &HEPData::Table::source)
+      .def_readonly("independent_vars", &HEPData::Table::independent_vars)
+      .def_readonly("dependent_vars", &HEPData::Table::dependent_vars)
+      .def("__str__", [](HEPData::Table const &hpd) {
         std::stringstream ss;
         ss << hpd;
         return ss.str();
       });
 
-  py::class_<HEPDataProbeFlux, HEPDataTable>(m, "HEPDataProbeFlux")
-      .def_readonly("probe_particle", &HEPDataProbeFlux::probe_particle)
-      .def_readonly("bin_content_type", &HEPDataProbeFlux::bin_content_type)
-      .def("__str__", [](HEPDataProbeFlux const &hpd) {
+  py::class_<HEPData::ProbeFlux, HEPData::Table>(m, "HEPData::ProbeFlux")
+      .def_readonly("probe_particle", &HEPData::ProbeFlux::probe_particle)
+      .def_readonly("bin_content_type", &HEPData::ProbeFlux::bin_content_type)
+      .def("__str__", [](HEPData::ProbeFlux const &hpd) {
         std::stringstream ss;
         ss << hpd;
         return ss.str();
       });
 
-  py::class_<HEPDataErrorTable, HEPDataTable>(m, "HEPDataErrorTable")
-      .def_readonly("error_type", &HEPDataErrorTable::error_type)
-      .def("__str__", [](HEPDataErrorTable const &hpd) {
+  py::class_<HEPData::ErrorTable, HEPData::Table>(m, "HEPData::ErrorTable")
+      .def_readonly("error_type", &HEPData::ErrorTable::error_type)
+      .def("__str__", [](HEPData::ErrorTable const &hpd) {
         std::stringstream ss;
         ss << hpd;
         return ss.str();
       });
 
-  py::class_<HEPDataSmearingTable, HEPDataTable>(m, "HEPDataSmearingTable")
-      .def("__str__", [](HEPDataSmearingTable const &hpd) {
+  py::class_<HEPData::SmearingTable, HEPData::Table>(m,
+                                                     "HEPData::SmearingTable")
+      .def("__str__", [](HEPData::SmearingTable const &hpd) {
         std::stringstream ss;
         ss << hpd;
         return ss.str();
       });
 
-  py::class_<HEPDataCrossSectionMeasurement::funcref>(
-      m, "HEPDataCrossSectionMeasurement::funcref")
-      .def_readonly("source", &HEPDataCrossSectionMeasurement::funcref::source)
-      .def_readonly("fname", &HEPDataCrossSectionMeasurement::funcref::fname);
+  py::class_<HEPData::CrossSectionMeasurement::funcref>(
+      m, "HEPData::CrossSectionMeasurement::funcref")
+      .def_readonly("source",
+                    &HEPData::CrossSectionMeasurement::funcref::source)
+      .def_readonly("fname", &HEPData::CrossSectionMeasurement::funcref::fname);
 
-  py::class_<HEPDataCrossSectionMeasurement::Weighted<HEPDataProbeFlux>>(
-      m, "HEPDataCrossSectionMeasurement::Weighted<HEPDataProbeFlux>")
+  py::class_<HEPData::CrossSectionMeasurement::Weighted<HEPData::ProbeFlux>>(
+      m, "HEPData::CrossSectionMeasurement::Weighted<HEPData::ProbeFlux>")
       .def_readonly(
           "obj",
-          &HEPDataCrossSectionMeasurement::Weighted<HEPDataProbeFlux>::obj)
+          &HEPData::CrossSectionMeasurement::Weighted<HEPData::ProbeFlux>::obj)
+      .def_readonly("weight", &HEPData::CrossSectionMeasurement::Weighted<
+                                  HEPData::ProbeFlux>::weight);
+
+  py::class_<HEPData::CrossSectionMeasurement::Weighted<std::string>>(
+      m, "HEPData::CrossSectionMeasurement::Weighted<std::string>")
+      .def_readonly(
+          "obj", &HEPData::CrossSectionMeasurement::Weighted<std::string>::obj)
       .def_readonly(
           "weight",
-          &HEPDataCrossSectionMeasurement::Weighted<HEPDataProbeFlux>::weight);
+          &HEPData::CrossSectionMeasurement::Weighted<std::string>::weight);
 
-  py::class_<HEPDataCrossSectionMeasurement::Weighted<std::string>>(
-      m, "HEPDataCrossSectionMeasurement::Weighted<std::string>")
-      .def_readonly("obj",
-                    &HEPDataCrossSectionMeasurement::Weighted<std::string>::obj)
-      .def_readonly(
-          "weight",
-          &HEPDataCrossSectionMeasurement::Weighted<std::string>::weight);
-
-  py::class_<HEPDataCrossSectionMeasurement, HEPDataTable>(
-      m, "HEPDataCrossSectionMeasurement")
+  py::class_<HEPData::CrossSectionMeasurement, HEPData::Table>(
+      m, "HEPData::CrossSectionMeasurement")
       .def_readonly("probe_fluxes",
-                    &HEPDataCrossSectionMeasurement::probe_fluxes)
-      .def_readonly("targets", &HEPDataCrossSectionMeasurement::targets)
-      .def_readonly("errors", &HEPDataCrossSectionMeasurement::errors)
-      .def_readonly("smearings", &HEPDataCrossSectionMeasurement::smearings)
-      .def_readonly("selectfuncs", &HEPDataCrossSectionMeasurement::selectfuncs)
+                    &HEPData::CrossSectionMeasurement::probe_fluxes)
+      .def_readonly("targets", &HEPData::CrossSectionMeasurement::targets)
+      .def_readonly("errors", &HEPData::CrossSectionMeasurement::errors)
+      .def_readonly("smearings", &HEPData::CrossSectionMeasurement::smearings)
+      .def_readonly("selectfuncs",
+                    &HEPData::CrossSectionMeasurement::selectfuncs)
       .def_readonly("projectfuncs",
-                    &HEPDataCrossSectionMeasurement::projectfuncs)
-      .def("__str__", [](HEPDataCrossSectionMeasurement const &hpd) {
+                    &HEPData::CrossSectionMeasurement::projectfuncs)
+      .def("get_single_probe_flux",
+           &HEPData::CrossSectionMeasurement::get_single_probe_flux)
+      .def("get_single_target",
+           &HEPData::CrossSectionMeasurement::get_single_target)
+      .def("get_single_selectfunc",
+           &HEPData::CrossSectionMeasurement::get_single_selectfunc)
+      .def("get_single_projectfuncs",
+           &HEPData::CrossSectionMeasurement::get_single_projectfuncs)
+      .def("__str__", [](HEPData::CrossSectionMeasurement const &hpd) {
         std::stringstream ss;
         ss << hpd;
         return ss.str();
       });
 
-  py::class_<HEPDataRecord>(m, "HEPDataRecord")
-      .def_readonly("record_root", &HEPDataRecord::record_root)
-      .def_readonly("record_ref", &HEPDataRecord::record_ref)
-      .def_readonly("measurements", &HEPDataRecord::measurements)
+  py::class_<HEPData::Record>(m, "HEPData::Record")
+      .def_readonly("record_root", &HEPData::Record::record_root)
+      .def_readonly("record_ref", &HEPData::Record::record_ref)
+      .def_readonly("measurements", &HEPData::Record::measurements)
       .def_readonly("additional_resources",
-                    &HEPDataRecord::additional_resources)
-      .def("__str__", [](HEPDataRecord const &hpd) {
+                    &HEPData::Record::additional_resources)
+      .def("__str__", [](HEPData::Record const &hpd) {
         std::stringstream ss;
         ss << hpd;
         return ss.str();
       });
 
-  py::class_<ResourceReference>(m, "ResourceReference")
-      .def(py::init<std::string const &, ResourceReference const &>(),
-           py::arg("ref"), py::arg("context") = ResourceReference())
-      .def_readonly("reftype", &ResourceReference::reftype)
-      .def_readonly("recordid", &ResourceReference::recordid)
-      .def_readonly("recordvers", &ResourceReference::recordvers)
-      .def_readonly("resourcename", &ResourceReference::resourcename)
-      .def_readonly("qualifier", &ResourceReference::qualifier);
+  py::class_<HEPData::ResourceReference>(m, "HEPData::ResourceReference")
+      .def(py::init<std::string const &, HEPData::ResourceReference const &>(),
+           py::arg("ref"), py::arg("context") = HEPData::ResourceReference())
+      .def_readonly("reftype", &HEPData::ResourceReference::reftype)
+      .def_readonly("recordid", &HEPData::ResourceReference::recordid)
+      .def_readonly("recordvers", &HEPData::ResourceReference::recordvers)
+      .def_readonly("resourcename", &HEPData::ResourceReference::resourcename)
+      .def_readonly("qualifier", &HEPData::ResourceReference::qualifier);
 
-  m.def("make_HEPDataCrossSectionMeasurement",
-        &make_HEPDataCrossSectionMeasurement, py::arg("ref"),
-        py::arg("local_cache_root") = ".")
+  m.def("make_CrossSectionMeasurement", &HEPData::make_CrossSectionMeasurement,
+        py::arg("ref"), py::arg("local_cache_root") = ".")
       .def(
-          "make_HEPDataCrossSectionMeasurement",
+          "make_CrossSectionMeasurement",
           [](std::string const &ref,
              std::filesystem::path const &local_cache_root) {
-            return make_HEPDataCrossSectionMeasurement(ResourceReference(ref),
-                                                       local_cache_root);
+            return make_CrossSectionMeasurement(HEPData::ResourceReference(ref),
+                                                local_cache_root);
           },
           py::arg("ref"), py::arg("local_cache_root") = ".")
-      .def("make_HEPDataRecord", &make_HEPDataRecord, py::arg("ref"),
+      .def("make_Record", &HEPData::make_Record, py::arg("ref"),
            py::arg("local_cache_root") = ".")
       .def(
-          "make_HEPDataRecord",
+          "make_Record",
           [](std::string const &ref,
              std::filesystem::path const &local_cache_root) {
-            return make_HEPDataRecord(ResourceReference(ref), local_cache_root);
+            return make_Record(HEPData::ResourceReference(ref),
+                               local_cache_root);
           },
           py::arg("ref"), py::arg("local_cache_root") = ".")
-      .def("resolve_reference", &resolve_reference, py::arg("ref"),
+      .def("resolve_reference", &HEPData::resolve_reference, py::arg("ref"),
            py::arg("local_cache_root") = ".")
       .def(
           "resolve_reference",
           [](std::string const &ref,
              std::filesystem::path const &local_cache_root) {
-            return resolve_reference(ResourceReference(ref), local_cache_root);
+            return HEPData::resolve_reference(HEPData::ResourceReference(ref),
+                                              local_cache_root);
           },
           py::arg("ref"), py::arg("local_cache_root") = ".");
 }

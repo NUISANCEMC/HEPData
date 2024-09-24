@@ -1,4 +1,6 @@
-#include "nuis/HEPData/HEPDataTables.hxx"
+#include "nuis/HEPData/TableFactory.hxx"
+
+#include "nuis/HEPData/Tables.hxx"
 
 #include "nuis/HEPData/ReferenceResolver.hxx"
 
@@ -7,16 +9,17 @@
 #include "fmt/core.h"
 #include "fmt/ranges.h"
 
-namespace nuis {
+#include "yaml-cpp/yaml.h"
 
-HEPDataProbeFlux
-make_HEPDataProbeFlux(ResourceReference ref,
-                      std::filesystem::path const &local_cache_root) {
+namespace nuis::HEPData {
+
+ProbeFlux make_ProbeFlux(ResourceReference ref,
+                         std::filesystem::path const &local_cache_root) {
 
   auto source = resolve_reference(ref, local_cache_root);
-  auto tbl = YAML::LoadFile(source).as<HEPDataTable>();
+  auto tbl = YAML::LoadFile(source).as<Table>();
 
-  HEPDataProbeFlux obj;
+  ProbeFlux obj;
   obj.source = source;
 
   for (auto const &dv : tbl.dependent_vars) {
@@ -40,10 +43,10 @@ make_HEPDataProbeFlux(ResourceReference ref,
   }
 
   if (!obj.dependent_vars.size()) {
-    throw std::runtime_error(fmt::format(
-        "When parsing HEPDataProbeFlux from ref: \"{}\" failed to find a "
-        "valid dependent variable.",
-        ref.str()));
+    throw std::runtime_error(
+        fmt::format("When parsing ProbeFlux from ref: \"{}\" failed to find a "
+                    "valid dependent variable.",
+                    ref.str()));
   }
 
   obj.probe_particle = obj.dependent_vars[0].qualifiers["probe_particle"];
@@ -51,14 +54,13 @@ make_HEPDataProbeFlux(ResourceReference ref,
   return obj;
 }
 
-HEPDataErrorTable
-make_HEPDataErrorTable(ResourceReference ref,
-                       std::filesystem::path const &local_cache_root) {
+ErrorTable make_ErrorTable(ResourceReference ref,
+                           std::filesystem::path const &local_cache_root) {
 
   auto source = resolve_reference(ref, local_cache_root);
-  auto tbl = YAML::LoadFile(source).as<HEPDataTable>();
+  auto tbl = YAML::LoadFile(source).as<Table>();
 
-  HEPDataErrorTable obj;
+  ErrorTable obj;
   obj.source = source;
 
   for (auto const &dv : tbl.dependent_vars) {
@@ -82,10 +84,10 @@ make_HEPDataErrorTable(ResourceReference ref,
   }
 
   if (!obj.dependent_vars.size()) {
-    throw std::runtime_error(fmt::format(
-        "When parsing HEPDataErrorTable from ref: \"{}\" failed to find a "
-        "valid dependent variable.",
-        ref.str()));
+    throw std::runtime_error(
+        fmt::format("When parsing ErrorTable from ref: \"{}\" failed to find a "
+                    "valid dependent variable.",
+                    ref.str()));
   }
 
   obj.error_type = obj.dependent_vars[0].qualifiers["error_type"];
@@ -137,29 +139,26 @@ std::pair<std::string, double> parse_weight_specifier(std::string specstring) {
   return {specstring, weight};
 }
 
-std::vector<HEPDataCrossSectionMeasurement::Weighted<HEPDataProbeFlux>>
+std::vector<CrossSectionMeasurement::Weighted<ProbeFlux>>
 parse_probe_fluxes(std::string fluxsstr, ResourceReference ref,
                    std::filesystem::path const &local_cache_root) {
 
-  std::vector<HEPDataCrossSectionMeasurement::Weighted<HEPDataProbeFlux>>
-      flux_specs;
+  std::vector<CrossSectionMeasurement::Weighted<ProbeFlux>> flux_specs;
 
   for (auto const &spec : split_spec(fluxsstr)) {
     auto const &[fluxstr, weight] = parse_weight_specifier(spec);
-    flux_specs.emplace_back(
-        HEPDataCrossSectionMeasurement::Weighted<HEPDataProbeFlux>{
-            make_HEPDataProbeFlux(ResourceReference(fluxstr, ref),
-                                  local_cache_root),
-            weight});
+    flux_specs.emplace_back(CrossSectionMeasurement::Weighted<ProbeFlux>{
+        make_ProbeFlux(ResourceReference(fluxstr, ref), local_cache_root),
+        weight});
   }
   return flux_specs;
 }
 
-HEPDataCrossSectionMeasurement::funcref
+CrossSectionMeasurement::funcref
 make_funcref(ResourceReference ref,
              std::filesystem::path const &local_cache_root) {
 
-  HEPDataCrossSectionMeasurement::funcref fref{
+  CrossSectionMeasurement::funcref fref{
       resolve_reference(ref, local_cache_root), ref.qualifier};
 
   if (!fref.fname.size()) {
@@ -172,16 +171,15 @@ make_funcref(ResourceReference ref,
   return fref;
 }
 
-std::vector<HEPDataCrossSectionMeasurement::Weighted<std::string>>
+std::vector<CrossSectionMeasurement::Weighted<std::string>>
 parse_targets(std::string targetsstr) {
 
-  std::vector<HEPDataCrossSectionMeasurement::Weighted<std::string>>
-      target_specs;
+  std::vector<CrossSectionMeasurement::Weighted<std::string>> target_specs;
   for (auto const &spec : split_spec(targetsstr)) {
 
     auto const &[tgtstr, weight] = parse_weight_specifier(spec);
     target_specs.emplace_back(
-        HEPDataCrossSectionMeasurement::Weighted<std::string>{tgtstr, weight});
+        CrossSectionMeasurement::Weighted<std::string>{tgtstr, weight});
   }
   return target_specs;
 }
@@ -206,11 +204,10 @@ std::vector<std::string> get_indexed_qualifier_values(
 
   std::vector<std::string> values;
 
-  size_t i = 0;
   while (true) { // read select funcs until you find no more
-    auto iq = get_indexed_qualifier(key, i++, qualifiers);
+    auto iq = get_indexed_qualifier(key, values.size(), qualifiers);
     if (!iq) {
-      if (required && (i == 0)) {
+      if (required && !values.size()) {
         throw std::runtime_error(fmt::format(
             "No \"{}\" found in qualifier map: {}", key, qualifiers));
       }
@@ -222,19 +219,23 @@ std::vector<std::string> get_indexed_qualifier_values(
   return values;
 }
 
-HEPDataCrossSectionMeasurement make_HEPDataCrossSectionMeasurement(
-    ResourceReference ref, std::filesystem::path const &local_cache_root) {
+static std::set<std::string> const valid_variable_types = {
+    "cross_section_measurement", "composite_cross_section_measurement"};
+
+CrossSectionMeasurement
+make_CrossSectionMeasurement(ResourceReference ref,
+                             std::filesystem::path const &local_cache_root) {
 
   auto source = resolve_reference(ref, local_cache_root);
-  auto tbl = YAML::LoadFile(source).as<HEPDataTable>();
+  auto tbl = YAML::LoadFile(source).as<Table>();
 
-  HEPDataCrossSectionMeasurement obj;
+  CrossSectionMeasurement obj;
   obj.source = source;
 
   for (auto const &dv : tbl.dependent_vars) {
 
     if (!dv.qualifiers.count("variable_type") ||
-        (dv.qualifiers.at("variable_type") != "cross_section_measurement")) {
+        (!valid_variable_types.count(dv.qualifiers.at("variable_type")))) {
       continue;
     }
 
@@ -242,18 +243,22 @@ HEPDataCrossSectionMeasurement make_HEPDataCrossSectionMeasurement(
       if (dv.name == ref.qualifier) {
         obj.independent_vars = tbl.independent_vars;
         obj.dependent_vars.push_back(dv);
+        obj.is_composite = (dv.qualifiers.at("variable_type") ==
+                            "composite_cross_section_measurement");
         break;
       }
     } else {
       obj.independent_vars = tbl.independent_vars;
       obj.dependent_vars.push_back(dv);
+      obj.is_composite = (dv.qualifiers.at("variable_type") ==
+                          "composite_cross_section_measurement");
       break;
     }
   }
 
   if (!obj.dependent_vars.size()) {
     throw std::runtime_error(
-        fmt::format("When parsing HEPDataCrossSectionMeasurement from ref: "
+        fmt::format("When parsing CrossSectionMeasurement from ref: "
                     "\"{}\" failed to find a "
                     "valid dependent variable.",
                     ref.str()));
@@ -262,52 +267,47 @@ HEPDataCrossSectionMeasurement make_HEPDataCrossSectionMeasurement(
   auto const &quals = obj.dependent_vars[0].qualifiers;
 
   for (auto const &sfuncref :
-       get_indexed_qualifier_values("selectfunc", quals, true)) {
+       get_indexed_qualifier_values("selectfunc", quals, !obj.is_composite)) {
     obj.selectfuncs.emplace_back(
         make_funcref(ResourceReference(sfuncref, ref), local_cache_root));
   }
 
   for (auto const &tgts_spec :
-       get_indexed_qualifier_values("target", quals, true)) {
+       get_indexed_qualifier_values("target", quals, !obj.is_composite)) {
     obj.targets.push_back(parse_targets(tgts_spec));
   }
 
-  for (size_t ivi = 0; ivi < obj.independent_vars.size(); ++ivi) {
+  for (auto const &ivar : obj.independent_vars) {
 
-    auto const &ivar_pfuncrefs = get_indexed_qualifier_values(
-        fmt::format("{}:projectfunc", obj.independent_vars[ivi].name), quals,
-        true);
+    obj.projectfuncs.emplace_back();
 
-    if (obj.projectfuncs.size() < ivar_pfuncrefs.size()) {
-      obj.projectfuncs.resize(ivar_pfuncrefs.size());
-    }
+    for (auto const &ivpf :
+         get_indexed_qualifier_values(fmt::format("{}:projectfunc", ivar.name),
+                                      quals, !obj.is_composite)) {
 
-    for (size_t pfi = 0; pfi < ivar_pfuncrefs.size(); ++pfi) {
-
-      obj.projectfuncs[pfi].emplace_back(make_funcref(
-          ResourceReference(ivar_pfuncrefs[pfi], ref), local_cache_root));
+      obj.projectfuncs.back().emplace_back(
+          make_funcref(ResourceReference(ivpf, ref), local_cache_root));
     }
   }
 
   for (auto const &probe_flux_spec :
-       get_indexed_qualifier_values("probe_flux", quals, true)) {
+       get_indexed_qualifier_values("probe_flux", quals, !obj.is_composite)) {
     obj.probe_fluxes.push_back(
         parse_probe_fluxes(probe_flux_spec, ref, local_cache_root));
   }
 
   for (auto const &errors_spec :
        get_indexed_qualifier_values("errors", quals)) {
-    obj.errors.emplace_back(make_HEPDataErrorTable(
-        ResourceReference(errors_spec, ref), local_cache_root));
+    obj.errors.emplace_back(
+        make_ErrorTable(ResourceReference(errors_spec, ref), local_cache_root));
   }
 
   return obj;
 }
 
-HEPDataRecord
-make_HEPDataRecord(ResourceReference ref,
+Record make_Record(ResourceReference ref,
                    std::filesystem::path const &local_cache_root) {
-  HEPDataRecord obj;
+  Record obj;
 
   ref = resolve_version(ref);
 
@@ -321,21 +321,21 @@ make_HEPDataRecord(ResourceReference ref,
     if (doc["data_file"]) {
       auto tbl =
           YAML::LoadFile(obj.record_root / doc["data_file"].as<std::string>())
-              .as<HEPDataTable>();
+              .as<Table>();
 
       for (auto const &dv : tbl.dependent_vars) {
 
         if (!dv.qualifiers.count("variable_type") ||
-            (dv.qualifiers.at("variable_type") !=
-             "cross_section_measurement")) {
+            !valid_variable_types.count(dv.qualifiers.at("variable_type"))) {
           continue;
         }
 
-        obj.measurements.emplace_back(make_HEPDataCrossSectionMeasurement(
+        obj.measurements.emplace_back(make_CrossSectionMeasurement(
             ResourceReference(obj.record_ref.str() + "/" +
                               doc["data_file"].as<std::string>() + ":" +
                               dv.name),
             local_cache_root));
+        obj.measurements.back().name = doc["name"].as<std::string>();
       }
     }
 
@@ -350,4 +350,4 @@ make_HEPDataRecord(ResourceReference ref,
   return obj;
 }
 
-} // namespace nuis
+} // namespace nuis::HEPData

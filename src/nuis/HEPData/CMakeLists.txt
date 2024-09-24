@@ -1,11 +1,20 @@
 set(HEADERS 
+  Tables.hxx
+  Variables.hxx
+  Record.hxx
   ResourceReference.hxx
-  ReferenceResolver.hxx)
+  ReferenceResolver.hxx
+  TableFactory.hxx
+  StreamHelpers.hxx
+  YAMLConverters.hxx)
 
-set(IMPLEMENTATION 
+set(IMPLEMENTATION
+  Tables.cxx
   ResourceReference.cxx
   ReferenceResolver.cxx
-  HEPDataTableFactory.cxx)
+  TableFactory.cxx
+  StreamHelpers.cxx
+  YAMLConverters.cxx)
 
 add_library(NUISANCEHEPData SHARED ${IMPLEMENTATION})
 target_link_libraries(NUISANCEHEPData PUBLIC NUISANCEHEPData::Options yaml-cpp::yaml-cpp)

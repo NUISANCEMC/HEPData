@@ -5,7 +5,7 @@
 #include <string>
 #include <tuple>
 
-namespace nuis {
+namespace nuis::HEPData {
 struct ResourceReference {
 
   std::string reftype;
@@ -40,4 +40,4 @@ struct ResourceReference {
 
 extern ResourceReference const HEPDataRef;
 
-} // namespace nuis
+} // namespace nuis::HEPData

@@ -11,7 +11,7 @@
 #include <fstream>
 #include <iostream>
 
-namespace nuis {
+namespace nuis::HEPData {
 
 std::filesystem::path
 get_expected_record_location(ResourceReference const &ref,
@@ -69,10 +69,12 @@ ensure_local_path(ResourceReference const &ref,
   auto expected_location =
       get_expected_resource_location(ref, local_cache_root);
 
+  std::string yaml_opt = expected_location.extension().empty() ? "[.yaml]" : "";
+
   spdlog::debug("ensure_local_path(ref={},local_cache_root={}): "
-                "expected_location = {}[.yaml]",
+                "expected_location = {}{}",
                 ref.str(), local_cache_root.native(),
-                expected_location.native());
+                expected_location.native(), yaml_opt);
 
   if (std::filesystem::exists(expected_location)) {
     return expected_location;
@@ -199,4 +201,4 @@ resolve_reference(ResourceReference const &ref,
   return resolve_reference_HEPData(ref, local_cache_root);
 }
 
-} // namespace nuis
+} // namespace nuis::HEPData

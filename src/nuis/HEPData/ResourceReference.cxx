@@ -2,7 +2,7 @@
 
 #include "fmt/core.h"
 
-namespace nuis {
+namespace nuis::HEPData {
 
 ResourceReference const HEPDataRef{"hepdata:/"};
 
@@ -27,6 +27,13 @@ ResourceReference::ResourceReference(std::string const &ref,
     // if there is no '/' then its either a typeidv or a resourcequal
     auto colon_pos = ref.find_first_of(':');
     if (colon_pos != std::string::npos) {
+      if (ref.find_first_of(':', colon_pos + 1) != std::string::npos) {
+        throw std::runtime_error(
+            fmt::format("reference: {} contained two colons but no forward "
+                        "slash, this is not a valid reference of the format: "
+                        "[<type=hepdata>:][<id>][[/]<resource[:<qualifier>]>].",
+                        ref));
+      }
       // if there is a colon, then the idv should be after the colon
       if (parse_idv(ref.substr(colon_pos + 1))) {
         parse_typeidv(ref);
@@ -180,4 +187,4 @@ std::string ResourceReference::component(std::string const &comp) const {
       fmt::format("Invalid reference component requested: {}", comp));
 }
 
-} // namespace nuis
+} // namespace nuis::HEPData
