@@ -180,6 +180,10 @@ ensure_local_path(ResourceReference const &ref,
 }
 
 ResourceReference resolve_version(ResourceReference ref) {
+  if (ref.reftype == "path") {
+    return ref;
+  }
+
   if (!ref.recordvers) { // unqualified version, check what the latest version
                          // is
     cpr::Url Endpoint = get_record_endpoint(ref);
@@ -231,6 +235,22 @@ resolve_reference(ResourceReference const &ref,
 
   spdlog::trace("resolve_reference(ref={},local_cache_root={})", ref.str(),
                 local_cache_root.native());
+
+  if (ref.reftype == "path") {
+    std::filesystem::path resource_path = ref.refstr;
+    
+    if (ref.resourcename.size()) {
+      resource_path /= ref.resourcename;
+    }
+
+    if (!std::filesystem::exists(resource_path)) {
+      throw std::runtime_error(
+          fmt::format("Resolving a path-type reference: {} with resourcename "
+                      "{} to path: {}, which does not exist.",
+                      ref.refstr, ref.resourcename, resource_path.native()));
+    }
+    return resource_path;
+  }
 
   return resolve_reference_HEPData(ref, local_cache_root);
 }

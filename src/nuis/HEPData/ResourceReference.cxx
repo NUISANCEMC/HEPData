@@ -2,6 +2,10 @@
 
 #include "fmt/core.h"
 
+#include "spdlog/spdlog.h"
+
+#include <filesystem>
+
 namespace nuis::HEPData {
 
 ResourceReference const HEPDataRef{"hepdata:/"};
@@ -9,11 +13,14 @@ ResourceReference const HEPDataRef{"hepdata:/"};
 // ref format: [<type=hepdata>:][<id>][[/]<resource[:<qualifier>]>]
 ResourceReference::ResourceReference(std::string const &ref,
                                      ResourceReference const &context) {
-  *this = context;
-  valid = true;
+  // dont blindly take context of path-type references
+  if (context.reftype != "path") {
+    *this = context;
+    valid = true;
 
-  refstr = ref;
-  context_refstr = context.refstr;
+    refstr = ref;
+    context_refstr = context.refstr;
+  }
 
   if (!ref.size()) {
     return;
@@ -47,6 +54,52 @@ ResourceReference::ResourceReference(std::string const &ref,
       return;
     } else { // assume this is a resourcequal
       parse_resourcequal(ref);
+
+      // if we only specify a resourcequal for this reference, then we should
+      // take the path context
+      if (context.reftype == "path") {
+        reftype = "path";
+        context_refstr = context.refstr;
+
+        std::filesystem::path refpath = context.refstr;
+
+        // if the refpath has submission.yaml on the end, remove it
+        if (refpath.filename() == "submission.yaml") {
+          refpath = refpath.parent_path();
+          if (!resourcename.size()) {
+            resourcename = "submission.yaml";
+          }
+        }
+
+        // set the path and test
+        refstr = refpath.native();
+
+        if (resourcename.size()) {
+          refpath /= resourcename;
+        }
+
+        if (!std::filesystem::exists(refpath) &&
+            (refpath.extension() != ".yaml") &&
+            std::filesystem::exists(refpath.native() + ".yaml")) {
+          resourcename += ".yaml";
+          refpath += ".yaml";
+        }
+
+        if (!std::filesystem::exists(refpath)) {
+          throw std::runtime_error(fmt::format(
+              "When building ResourceReference from path-type "
+              "reference with path:{}, resourcename: {}, file: {}[.yaml]"
+              "does not exist.",
+              refpath.native(), resourcename,
+              (refpath / resourcename).native()));
+        }
+
+        spdlog::debug(
+            "building pathtype ref: {} from refstr: {}, and context: {}",
+            this->str(), ref, context.str());
+
+      } // end if (context.reftype == "path")
+
       return;
     }
   }
@@ -127,6 +180,17 @@ void ResourceReference::parse_resourcequal(std::string resourceref) {
 
 ResourceReference ResourceReference::record_ref() const {
 
+  if (reftype == "path") {
+    ResourceReference ref;
+    ref.reftype = reftype;
+    if (std::filesystem::path(refstr).filename().native() !=
+        "submission.yaml") {
+      ref.resourcename = "submission.yaml";
+    }
+    ref.refstr = refstr;
+    return ref;
+  }
+
   std::stringstream ss;
 
   if (!recordid) {
@@ -154,10 +218,15 @@ std::string ResourceReference::str() const {
 
   std::stringstream ss;
 
-  ss << reftype << ":" << recordid;
+  if (reftype == "path") {
+    ss << "path:[" << refstr << "]";
+  } else {
 
-  if (recordvers) {
-    ss << "v" << recordvers;
+    ss << reftype << ":" << recordid;
+
+    if (recordvers) {
+      ss << "v" << recordvers;
+    }
   }
 
   if (resourcename.size()) {

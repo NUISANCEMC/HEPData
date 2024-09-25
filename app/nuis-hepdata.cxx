@@ -29,6 +29,7 @@ static const char USAGE[] =
     Options:
       --nuisancedb=<path>   Use <path> as the record database root.
       --debug               Enable logging for any http requests.
+      --path                Interpret <ref> as a local path to a submission.yaml
     
 
     <ref> arguments are of the form: [type:]<id>[/resource[:qualifier]]
@@ -82,35 +83,35 @@ int main(int argc, const char **argv) {
                     local_cache_root.native()));
   }
 
+  ResourceReference cli_ref;
+  if (args["--path"].asBool()) {
+    cli_ref.reftype = "path";
+    cli_ref.refstr = args["<ref>"].asString();
+  } else {
+    cli_ref = ResourceReference(args["<ref>"].asString());
+  }
+
   if (args["get-ref-component"].asBool()) {
-    std::cout << ResourceReference(args["<ref>"].asString())
-                     .component(args["<comp>"].asString())
-              << std::endl;
+    std::cout << cli_ref.component(args["<comp>"].asString()) << std::endl;
     return 0;
   }
 
   if (args["get-cross-section-measurements"].asBool()) {
     for (auto const &measurement :
-         make_Record(ResourceReference(args["<ref>"].asString()),
-                     local_cache_root)
-             .measurements) {
+         make_Record(cli_ref, local_cache_root).measurements) {
       std::cout << measurement.source.stem().native() << std::endl;
     }
     return 0;
   }
 
   if (args["get-local-path"].asBool()) {
-    std::cout << resolve_reference(ResourceReference(args["<ref>"].asString()),
-                                   local_cache_root)
-                     .native()
+    std::cout << resolve_reference(cli_ref, local_cache_root).native()
               << std::endl;
     return 0;
   }
 
   if (args["get-independent-vars"].asBool()) {
-    auto tbl = YAML::LoadFile(resolve_reference(
-                                  ResourceReference(args["<ref>"].asString()),
-                                  local_cache_root))
+    auto tbl = YAML::LoadFile(resolve_reference(cli_ref, local_cache_root))
                    .as<Table>();
     for (auto const &ivar : tbl.independent_vars) {
       std::cout << ivar.name << std::endl;
@@ -119,9 +120,7 @@ int main(int argc, const char **argv) {
   }
 
   if (args["get-dependent-vars"].asBool()) {
-    auto tbl = YAML::LoadFile(resolve_reference(
-                                  ResourceReference(args["<ref>"].asString()),
-                                  local_cache_root))
+    auto tbl = YAML::LoadFile(resolve_reference(cli_ref, local_cache_root))
                    .as<Table>();
     for (auto const &dvar : tbl.dependent_vars) {
       std::cout << dvar.name << std::endl;
@@ -131,7 +130,7 @@ int main(int argc, const char **argv) {
 
   if (args["get-qualifiers"].asBool() ||
       args["dereference-to-local-path"].asBool()) {
-    auto ref = ResourceReference(args["<ref>"].asString());
+    auto ref = cli_ref;
     auto tbl =
         YAML::LoadFile(resolve_reference(ref, local_cache_root)).as<Table>();
 
@@ -181,9 +180,7 @@ int main(int argc, const char **argv) {
 
   if (args["get-local-additional-resources"].asBool()) {
     for (auto const &addres :
-         make_Record(ResourceReference(args["<ref>"].asString()),
-                     local_cache_root)
-             .additional_resources) {
+         make_Record(cli_ref, local_cache_root).additional_resources) {
       std::cout << addres.filename().native() << std::endl;
     }
   }

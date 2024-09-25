@@ -8,6 +8,8 @@
 
 #include "yaml-cpp/yaml.h"
 
+#include "spdlog/spdlog.h"
+
 namespace nuis::HEPData {
 
 ProbeFlux make_ProbeFlux(ResourceReference ref,
@@ -404,29 +406,51 @@ Record make_Record(ResourceReference ref,
   obj.record_ref = ref.record_ref();
   auto submission = resolve_reference(obj.record_ref, local_cache_root);
   obj.record_root = submission.parent_path();
+  spdlog::debug("make_Record(ref={}), loading documents from file: {}",
+                ref.str(), submission.native());
 
   auto docs = YAML::LoadAllFromFile(submission.native());
 
   for (auto const &doc : docs) {
     if (doc["data_file"]) {
-      auto tbl =
-          YAML::LoadFile(obj.record_root / doc["data_file"].as<std::string>())
-              .as<Table>();
+      auto data_file_path =
+          obj.record_root / doc["data_file"].as<std::string>();
+      auto tbl = YAML::LoadFile(data_file_path.native()).as<Table>();
+
+      spdlog::debug("  -> loading data_file: {}", data_file_path.native());
 
       for (auto const &dv : tbl.dependent_vars) {
+        spdlog::debug("    -> dependent_variable(name={}, type={})", dv.name,
+                      (dv.qualifiers.count("variable_type")
+                           ? dv.qualifiers.at("variable_type")
+                           : "n/a"));
 
         if (!dv.qualifiers.count("variable_type") ||
             !valid_variable_types.count(dv.qualifiers.at("variable_type"))) {
           continue;
         }
 
-        obj.measurements.emplace_back(make_CrossSectionMeasurement(
-            ResourceReference(obj.record_ref.str() + "/" +
-                              doc["data_file"].as<std::string>() + ":" +
-                              dv.name),
-            local_cache_root));
+        ResourceReference xsref;
+
+        if (ref.reftype == "path") {
+          xsref = ResourceReference(
+              fmt::format("{}:{}", doc["data_file"].as<std::string>(), dv.name),
+              ref);
+        } else {
+          xsref = ResourceReference(obj.record_ref.str() + "/" +
+                                    doc["data_file"].as<std::string>() + ":" +
+                                    dv.name);
+        }
+
+        spdlog::debug(" + building xs measurement from ref: {}", xsref.str());
+
+        obj.measurements.emplace_back(
+            make_CrossSectionMeasurement(xsref, local_cache_root));
         obj.measurements.back().name = doc["name"].as<std::string>();
       }
+    } else {
+      spdlog::debug("no data_file in doc: ");
+      YAML::Dump(doc);
     }
 
     for (auto const &addres : doc["additional_resources"]) {
@@ -438,6 +462,25 @@ Record make_Record(ResourceReference ref,
     }
   }
   return obj;
+}
+
+Record make_Record(std::filesystem::path const &location,
+                   std::filesystem::path const &local_cache_root) {
+
+  if ((location.filename() != "submission.yaml") ||
+      !std::filesystem::exists(location)) {
+    throw std::runtime_error(
+        fmt::format("make_Record called with a path: {} that did not "
+                    "point to an existing submission.yaml",
+                    location.native()));
+  }
+
+  ResourceReference local_ref;
+  local_ref.reftype = "path";
+  local_ref.resourcename = "submission.yaml";
+  local_ref.refstr = location.parent_path().native();
+
+  return make_Record(local_ref, local_cache_root);
 }
 
 } // namespace nuis::HEPData
