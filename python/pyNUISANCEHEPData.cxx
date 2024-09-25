@@ -94,6 +94,7 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
 
   py::class_<HEPData::CrossSectionMeasurement, HEPData::Table>(
       m, "HEPData::CrossSectionMeasurement")
+      .def_readonly("name", &HEPData::CrossSectionMeasurement::name)
       .def_readonly("probe_fluxes",
                     &HEPData::CrossSectionMeasurement::probe_fluxes)
       .def_readonly("targets", &HEPData::CrossSectionMeasurement::targets)
@@ -103,8 +104,12 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
                     &HEPData::CrossSectionMeasurement::selectfuncs)
       .def_readonly("projectfuncs",
                     &HEPData::CrossSectionMeasurement::projectfuncs)
+      .def_readonly("variable_type",
+                    &HEPData::CrossSectionMeasurement::variable_type)
       .def_readonly("measurement_type",
                     &HEPData::CrossSectionMeasurement::measurement_type)
+      .def_readonly("sub_measurements",
+                    &HEPData::CrossSectionMeasurement::sub_measurements)
       .def_readonly("cross_section_units",
                     &HEPData::CrossSectionMeasurement::cross_section_units)
       .def_readonly("test_statistic",

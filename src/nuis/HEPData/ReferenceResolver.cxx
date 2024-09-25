@@ -138,7 +138,6 @@ ensure_local_path(ResourceReference const &ref,
   }
 
   std::string redir = "&>/dev/null";
-  std::cout << spdlog::get_level() << ", " << spdlog::level::debug << std::endl;
   if (spdlog::get_level() <= spdlog::level::debug) {
     redir = "";
   }
