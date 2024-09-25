@@ -1,6 +1,6 @@
-#include "nuis/HEPData/ReferenceResolver.hxx"
-#include "nuis/HEPData/TableFactory.hxx"
-#include "nuis/HEPData/YAMLConverters.hxx"
+#include "nuis/HEPData/ReferenceResolver.h"
+#include "nuis/HEPData/TableFactory.h"
+#include "nuis/HEPData/YAMLConverters.h"
 
 #include "docopt.h"
 
