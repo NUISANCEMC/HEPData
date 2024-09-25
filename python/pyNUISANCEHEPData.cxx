@@ -93,11 +93,11 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
       HEPData::CrossSectionMeasurement::Target>>(
       m, "HEPData::CrossSectionMeasurement::Weighted<HEPData::"
          "CrossSectionMeasurement::Target>")
-      .def_readonly(
-          "obj", &HEPData::CrossSectionMeasurement::Weighted<std::string>::obj)
-      .def_readonly(
-          "weight",
-          &HEPData::CrossSectionMeasurement::Weighted<std::string>::weight);
+      .def_readonly("obj", &HEPData::CrossSectionMeasurement::Weighted<
+                               HEPData::CrossSectionMeasurement::Target>::obj)
+      .def_readonly("weight",
+                    &HEPData::CrossSectionMeasurement::Weighted<
+                        HEPData::CrossSectionMeasurement::Target>::weight);
 
   py::class_<HEPData::CrossSectionMeasurement, HEPData::Table>(
       m, "HEPData::CrossSectionMeasurement")
@@ -123,8 +123,8 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
                     &HEPData::CrossSectionMeasurement::test_statistic)
       .def("get_single_probe_flux",
            &HEPData::CrossSectionMeasurement::get_single_probe_flux)
-      .def("get_single_target",
-           &HEPData::CrossSectionMeasurement::get_single_target)
+      .def("get_simple_target",
+           &HEPData::CrossSectionMeasurement::get_simple_target)
       .def("get_single_selectfunc",
            &HEPData::CrossSectionMeasurement::get_single_selectfunc)
       .def("get_single_projectfuncs",
