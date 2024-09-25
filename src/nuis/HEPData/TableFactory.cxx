@@ -324,7 +324,9 @@ make_CrossSectionMeasurement(ResourceReference ref,
   }
 
   if (quals.count("cross_section_units")) {
-    obj.cross_section_units = split_spec(quals.at("cross_section_units"), '|');
+    for (auto const &u : split_spec(quals.at("cross_section_units"), '|')) {
+      obj.cross_section_units.insert(u);
+    }
   }
 
   obj.test_statistic = "chi2";

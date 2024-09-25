@@ -3,6 +3,7 @@
 #include "nuis/HEPData/Variables.hxx"
 
 #include <filesystem>
+#include <set>
 
 namespace nuis::HEPData {
 struct Table {
@@ -35,7 +36,7 @@ struct CrossSectionMeasurement : public Table {
 
   std::string variable_type;
   std::string measurement_type;
-  std::vector<std::string> cross_section_units;
+  std::set<std::string> cross_section_units;
   std::string test_statistic;
   
   std::vector<std::vector<Weighted<ProbeFlux>>> probe_fluxes;
