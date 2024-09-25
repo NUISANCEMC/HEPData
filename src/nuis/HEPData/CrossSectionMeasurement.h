@@ -1,27 +1,13 @@
 #pragma once
 
-#include "nuis/HEPData/Variables.hxx"
+#include "nuis/HEPData/Tables.h"
 
 #include <filesystem>
 #include <set>
+#include <string>
+#include <vector>
 
 namespace nuis::HEPData {
-struct Table {
-  std::filesystem::path source;
-  std::vector<Variable> independent_vars;
-  std::vector<DependentVariable> dependent_vars;
-};
-
-struct ProbeFlux : public Table {
-  std::string probe_particle;
-  std::string bin_content_type;
-};
-
-struct ErrorTable : public Table {
-  std::string error_type;
-};
-
-struct SmearingTable : public Table {};
 
 struct CrossSectionMeasurement : public Table {
 
@@ -32,15 +18,22 @@ struct CrossSectionMeasurement : public Table {
     T obj;
     double weight;
     T const &operator*() const { return obj; }
+    T const *operator->() const { return &obj; }
   };
 
   std::string variable_type;
   std::string measurement_type;
   std::set<std::string> cross_section_units;
   std::string test_statistic;
-  
+
+  struct Target {
+    int A, Z;
+  };
+
   std::vector<std::vector<Weighted<ProbeFlux>>> probe_fluxes;
-  std::vector<std::vector<Weighted<std::string>>> targets;
+
+  using TargetList = std::vector<Weighted<Target>>;
+  std::vector<TargetList> targets;
   std::vector<ErrorTable> errors;
   std::vector<SmearingTable> smearings;
   std::vector<CrossSectionMeasurement> sub_measurements;
@@ -58,7 +51,12 @@ struct CrossSectionMeasurement : public Table {
   // these functions will throw if the measurement is not a simple measurement
   // with one entry for the corresponding component
   ProbeFlux const &get_single_probe_flux() const;
-  std::string const &get_single_target() const;
+  // This works for measurements with a single list of targets, it sums up the
+  // weighted proton and neutron numbers of all targets,
+  //   e.g. a CH2 target -> A=14, Z=8.
+  // This object has limited utility but can be useful for non-standard cross
+  // section unit scalings.
+  std::pair<double, double> get_simple_target() const;
   funcref const &get_single_selectfunc() const;
   std::vector<funcref> get_single_projectfuncs() const;
 };

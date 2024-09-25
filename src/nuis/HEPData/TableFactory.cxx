@@ -1,10 +1,7 @@
-#include "nuis/HEPData/TableFactory.hxx"
-
-#include "nuis/HEPData/Tables.hxx"
-
-#include "nuis/HEPData/ReferenceResolver.hxx"
-
-#include "nuis/HEPData/YAMLConverters.hxx"
+#include "nuis/HEPData/TableFactory.h"
+#include "nuis/HEPData/CrossSectionMeasurement.h"
+#include "nuis/HEPData/ReferenceResolver.h"
+#include "nuis/HEPData/YAMLConverters.h"
 
 #include "fmt/core.h"
 #include "fmt/ranges.h"
@@ -171,15 +168,68 @@ make_funcref(ResourceReference ref,
   return fref;
 }
 
-std::vector<CrossSectionMeasurement::Weighted<std::string>>
-parse_targets(std::string targetsstr) {
+inline int NuclearPDGToA(int pid) {
+  // ±10LZZZAAAI
+  return (pid / 1) % 1000;
+}
 
-  std::vector<CrossSectionMeasurement::Weighted<std::string>> target_specs;
+inline int NuclearPDGToZ(int pid) {
+  // ±10LZZZAAAI
+  return (pid / 10000) % 1000;
+}
+
+CrossSectionMeasurement::TargetList
+tgtstr_to_target(std::string const &tgtstr) {
+  using wgtgt = CrossSectionMeasurement::TargetList::value_type;
+  try {
+    auto pid = std::stol(tgtstr);
+    return {
+        wgtgt{CrossSectionMeasurement::Target{NuclearPDGToA(pid),
+                                              NuclearPDGToZ(pid)},
+              1},
+    };
+  } catch (std::invalid_argument &ia) {
+  }
+
+  if (tgtstr == "C") {
+    return {wgtgt{CrossSectionMeasurement::Target{12, 6}, 1}};
+  } else if (tgtstr == "CH") {
+    return {wgtgt{CrossSectionMeasurement::Target{12, 6}, 1},
+            wgtgt{CrossSectionMeasurement::Target{1, 1}, 1}};
+  } else if (tgtstr == "CH2") {
+    return {wgtgt{CrossSectionMeasurement::Target{12, 6}, 1},
+            wgtgt{CrossSectionMeasurement::Target{1, 1}, 2}};
+  } else if (tgtstr == "O") {
+    return {wgtgt{CrossSectionMeasurement::Target{16, 8}, 1}};
+  } else if (tgtstr == "H2O") {
+    return {wgtgt{CrossSectionMeasurement::Target{16, 8}, 1},
+            wgtgt{CrossSectionMeasurement::Target{1, 1}, 2}};
+  } else if (tgtstr == "Ar") {
+    return {wgtgt{CrossSectionMeasurement::Target{16, 8}, 1}};
+  } else if (tgtstr == "Fe") {
+    return {wgtgt{CrossSectionMeasurement::Target{56, 26}, 1}};
+  } else if (tgtstr == "Pb") {
+    return {wgtgt{CrossSectionMeasurement::Target{208, 82}, 1}};
+  }
+
+  throw std::runtime_error(
+      fmt::format("failed to parse target string: {}", tgtstr));
+}
+
+CrossSectionMeasurement::TargetList parse_targets(std::string targetsstr) {
+
+  CrossSectionMeasurement::TargetList target_specs;
   for (auto const &spec : split_spec(targetsstr)) {
 
     auto const &[tgtstr, weight] = parse_weight_specifier(spec);
-    target_specs.emplace_back(
-        CrossSectionMeasurement::Weighted<std::string>{tgtstr, weight});
+    auto const &targets = tgtstr_to_target(tgtstr);
+
+    for (auto tgt : targets) {
+      // always weight by A so that weights correspond to mass ratio even when
+      // unspecified
+      tgt.weight *= weight * double(tgt->A);
+      target_specs.emplace_back(tgt);
+    }
   }
   return target_specs;
 }

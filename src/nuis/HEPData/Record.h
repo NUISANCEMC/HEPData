@@ -1,8 +1,7 @@
 #pragma once
 
-#include "nuis/HEPData/Tables.hxx"
-
-#include "nuis/HEPData/ResourceReference.hxx"
+#include "nuis/HEPData/CrossSectionMeasurement.h"
+#include "nuis/HEPData/ResourceReference.h"
 
 #include <filesystem>
 #include <iostream>

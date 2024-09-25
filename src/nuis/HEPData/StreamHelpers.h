@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nuis/HEPData/Record.hxx"
+#include "nuis/HEPData/Record.h"
 
 #include <iostream>
 
@@ -20,6 +20,9 @@ std::ostream &operator<<(std::ostream &os, ProbeFlux const &pf);
 
 std::ostream &operator<<(std::ostream &os,
                          CrossSectionMeasurement::funcref const &fref);
+
+std::ostream &operator<<(std::ostream &os,
+                         CrossSectionMeasurement::Target const &tgt);
 
 std::ostream &operator<<(std::ostream &os,
                          CrossSectionMeasurement const &measurement);

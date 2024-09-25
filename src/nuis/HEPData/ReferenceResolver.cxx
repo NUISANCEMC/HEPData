@@ -1,4 +1,4 @@
-#include "nuis/HEPData/ReferenceResolver.hxx"
+#include "nuis/HEPData/ReferenceResolver.h"
 
 #include "cpr/cpr.h"
 

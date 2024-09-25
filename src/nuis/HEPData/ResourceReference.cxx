@@ -1,4 +1,4 @@
-#include "nuis/HEPData/ResourceReference.hxx"
+#include "nuis/HEPData/ResourceReference.h"
 
 #include "fmt/core.h"
 

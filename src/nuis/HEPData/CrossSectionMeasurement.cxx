@@ -1,4 +1,4 @@
-#include "nuis/HEPData/Tables.hxx"
+#include "nuis/HEPData/CrossSectionMeasurement.h"
 
 #include "fmt/core.h"
 
@@ -24,22 +24,28 @@ ProbeFlux const &CrossSectionMeasurement::get_single_probe_flux() const {
   return *probe_fluxes[0][0];
 }
 
-std::string const &CrossSectionMeasurement::get_single_target() const {
+std::pair<double, double>
+CrossSectionMeasurement::get_simple_target() const {
   if (targets.size() > 1) {
     throw std::runtime_error(fmt::format(
-        "Called CrossSectionMeasurement::get_single_target on a non-simple "
+        "Called CrossSectionMeasurement::get_simple_target on a non-simple "
         "measurement with {} target specifications.",
         targets.size()));
   }
-  if (targets[0].size() > 1) {
-    throw std::runtime_error(fmt::format(
-        "Called CrossSectionMeasurement::get_single_target on a non-simple "
-        "measurement with a target specification with {} "
-        "sub-components.",
-        targets[0].size()));
+  std::pair<double, double> AZ{0, 0};
+
+  double sumw = 0;
+
+  for (auto const &tgt : targets[0]) {
+    AZ.first += tgt->A * tgt.weight;
+    AZ.second += tgt->Z * tgt.weight;
+    sumw += tgt.weight;
   }
 
-  return *targets[0][0];
+  AZ.first /= sumw;
+  AZ.second /= sumw;
+
+  return AZ;
 }
 
 CrossSectionMeasurement::funcref const &

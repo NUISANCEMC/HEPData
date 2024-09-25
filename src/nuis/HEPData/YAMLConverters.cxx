@@ -1,6 +1,5 @@
-#include "nuis/HEPData/YAMLConverters.hxx"
-
-#include "nuis/HEPData/Record.hxx"
+#include "nuis/HEPData/YAMLConverters.h"
+#include "nuis/HEPData/Record.h"
 
 #include "yaml-cpp/yaml.h"
 

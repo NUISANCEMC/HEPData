@@ -1,4 +1,4 @@
-#include "nuis/HEPData/StreamHelpers.hxx"
+#include "nuis/HEPData/StreamHelpers.h"
 
 #include "fmt/core.h"
 
@@ -27,8 +27,7 @@ std::ostream &operator<<(std::ostream &os, Variable const &var) {
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os,
-                         DependentVariable const &var) {
+std::ostream &operator<<(std::ostream &os, DependentVariable const &var) {
   os << static_cast<Variable const &>(var);
   os << "  qualifiers:\n";
   for (auto const &q : var.qualifiers) {
@@ -63,6 +62,11 @@ std::ostream &operator<<(std::ostream &os, ProbeFlux const &pf) {
 std::ostream &operator<<(std::ostream &os,
                          CrossSectionMeasurement::funcref const &fref) {
   return os << "{" << fref.fname << " from " << fref.source << "}";
+}
+
+std::ostream &operator<<(std::ostream &os,
+                         CrossSectionMeasurement::Target const &tgt) {
+  return os << "{ A:" << tgt.A << ", Z: " << tgt.Z << "}";
 }
 
 std::ostream &operator<<(std::ostream &os,
@@ -113,4 +117,4 @@ std::ostream &operator<<(std::ostream &os, Record const &rec) {
   return os;
 }
 
-} // namespace nuis
+} // namespace nuis::HEPData

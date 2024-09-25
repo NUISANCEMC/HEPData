@@ -1,15 +1,16 @@
 set(HEADERS 
-  Tables.hxx
-  Variables.hxx
-  Record.hxx
-  ResourceReference.hxx
-  ReferenceResolver.hxx
-  TableFactory.hxx
-  StreamHelpers.hxx
-  YAMLConverters.hxx)
+  Tables.h
+  Variables.h
+  Record.h
+  ResourceReference.h
+  ReferenceResolver.h
+  TableFactory.h
+  StreamHelpers.h
+  YAMLConverters.h
+  CrossSectionMeasurement.h)
 
 set(IMPLEMENTATION
-  Tables.cxx
+  CrossSectionMeasurement.cxx
   ResourceReference.cxx
   ReferenceResolver.cxx
   TableFactory.cxx

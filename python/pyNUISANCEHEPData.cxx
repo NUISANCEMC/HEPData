@@ -1,10 +1,10 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 
-#include "nuis/HEPData/ReferenceResolver.hxx"
-#include "nuis/HEPData/ResourceReference.hxx"
-#include "nuis/HEPData/StreamHelpers.hxx"
-#include "nuis/HEPData/TableFactory.hxx"
+#include "nuis/HEPData/ReferenceResolver.h"
+#include "nuis/HEPData/ResourceReference.h"
+#include "nuis/HEPData/StreamHelpers.h"
+#include "nuis/HEPData/TableFactory.h"
 
 namespace py = pybind11;
 using namespace nuis;
@@ -84,8 +84,15 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
       .def_readonly("weight", &HEPData::CrossSectionMeasurement::Weighted<
                                   HEPData::ProbeFlux>::weight);
 
-  py::class_<HEPData::CrossSectionMeasurement::Weighted<std::string>>(
-      m, "HEPData::CrossSectionMeasurement::Weighted<std::string>")
+  py::class_<HEPData::CrossSectionMeasurement::Target>(
+      m, "HEPData::CrossSectionMeasurement::Target")
+      .def_readonly("A", &HEPData::CrossSectionMeasurement::Target::A)
+      .def_readonly("Z", &HEPData::CrossSectionMeasurement::Target::Z);
+
+  py::class_<HEPData::CrossSectionMeasurement::Weighted<
+      HEPData::CrossSectionMeasurement::Target>>(
+      m, "HEPData::CrossSectionMeasurement::Weighted<HEPData::"
+         "CrossSectionMeasurement::Target>")
       .def_readonly(
           "obj", &HEPData::CrossSectionMeasurement::Weighted<std::string>::obj)
       .def_readonly(
