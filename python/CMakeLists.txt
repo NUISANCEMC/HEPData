@@ -4,7 +4,7 @@ pybind11_add_module(pyNUISANCEHEPData SHARED
 
 target_link_libraries(pyNUISANCEHEPData 
   PRIVATE 
-    NUISANCEHEPData::All
+    NUISANCEHEPData
     pybind11::module)
 
 target_include_directories(pyNUISANCEHEPData PRIVATE

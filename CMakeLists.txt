@@ -117,7 +117,6 @@ add_library(nuishpd_options INTERFACE)
 
 target_include_directories(nuishpd_options INTERFACE 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>
-  $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include> 
   $<INSTALL_INTERFACE:include>)
 
 set_target_properties(nuishpd_options PROPERTIES EXPORT_NAME Options)
@@ -185,7 +184,6 @@ add_library(docopt::docopt ALIAS docopt)
 if(NUISANCEHEPData_PYTHON_ENABLED)
   find_package(Python3 REQUIRED)
 endif()
-
 
 add_subdirectory(src/nuis/HEPData)
 add_subdirectory(app)
