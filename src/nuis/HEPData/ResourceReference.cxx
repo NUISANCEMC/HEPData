@@ -59,46 +59,8 @@ ResourceReference::ResourceReference(std::string const &ref,
       // take the path context
       if (context.reftype == "path") {
         reftype = "path";
-        context_refstr = context.refstr;
-
-        std::filesystem::path refpath = context.refstr;
-
-        // if the refpath has submission.yaml on the end, remove it
-        if (refpath.filename() == "submission.yaml") {
-          refpath = refpath.parent_path();
-          if (!resourcename.size()) {
-            resourcename = "submission.yaml";
-          }
-        }
-
-        // set the path and test
-        refstr = refpath.native();
-
-        if (resourcename.size()) {
-          refpath /= resourcename;
-        }
-
-        if (!std::filesystem::exists(refpath) &&
-            (refpath.extension() != ".yaml") &&
-            std::filesystem::exists(refpath.native() + ".yaml")) {
-          resourcename += ".yaml";
-          refpath += ".yaml";
-        }
-
-        if (!std::filesystem::exists(refpath)) {
-          throw std::runtime_error(fmt::format(
-              "When building ResourceReference from path-type "
-              "reference with path:{}, resourcename: {}, file: {}[.yaml]"
-              "does not exist.",
-              refpath.native(), resourcename,
-              (refpath / resourcename).native()));
-        }
-
-        spdlog::debug(
-            "building pathtype ref: {} from refstr: {}, and context: {}",
-            this->str(), ref, context.str());
-
-      } // end if (context.reftype == "path")
+        path = context.path;
+      }
 
       return;
     }
@@ -145,6 +107,7 @@ void ResourceReference::parse_typeidv(std::string typeidv) {
   // if we are overwriting the record, then flatten any context more specific
   resourcename = "";
   qualifier = "";
+  path = "";
 
   // ':' is the delimiter, search for that
   auto colon_pos = typeidv.find_first_of(':');
@@ -183,11 +146,7 @@ ResourceReference ResourceReference::record_ref() const {
   if (reftype == "path") {
     ResourceReference ref;
     ref.reftype = reftype;
-    if (std::filesystem::path(refstr).filename().native() !=
-        "submission.yaml") {
-      ref.resourcename = "submission.yaml";
-    }
-    ref.refstr = refstr;
+    ref.path = path;
     return ref;
   }
 
@@ -219,7 +178,16 @@ std::string ResourceReference::str() const {
   std::stringstream ss;
 
   if (reftype == "path") {
-    ss << "path:[" << refstr << "]";
+
+    ss << "path:" << refstr << "";
+    if (resourcename.size()) {
+      ss << ":" << resourcename;
+    }
+
+    if (qualifier.size()) {
+      ss << ":" << qualifier;
+    }
+
   } else {
 
     ss << reftype << ":" << recordid;
@@ -227,14 +195,13 @@ std::string ResourceReference::str() const {
     if (recordvers) {
       ss << "v" << recordvers;
     }
-  }
+    if (resourcename.size()) {
+      ss << "/" << resourcename;
+    }
 
-  if (resourcename.size()) {
-    ss << "/" << resourcename;
-  }
-
-  if (qualifier.size()) {
-    ss << ":" << qualifier;
+    if (qualifier.size()) {
+      ss << ":" << qualifier;
+    }
   }
 
   return ss.str();
@@ -254,6 +221,78 @@ std::string ResourceReference::component(std::string const &comp) const {
   }
   throw std::runtime_error(
       fmt::format("Invalid reference component requested: {}", comp));
+}
+
+// ref format: /path/to/file.yaml[:<resource[:qualifier]>]
+ResourceReference PathResourceReference(std::string const &refstr) {
+  ResourceReference out_ref;
+
+  out_ref.reftype = "path";
+
+  auto first_colon = refstr.find_first_of(':');
+  if (first_colon != std::string::npos) {
+
+    out_ref.path = refstr.substr(0, first_colon);
+
+    auto second_colon = refstr.find_first_of(':', first_colon + 1);
+    if (second_colon != std::string::npos) {
+      out_ref.resourcename =
+          refstr.substr(first_colon + 1, second_colon - (first_colon + 1));
+      out_ref.qualifier = refstr.substr(second_colon + 1);
+    } else {
+      out_ref.resourcename = refstr.substr(first_colon + 1);
+    }
+
+  } else {
+    out_ref.path = refstr;
+  }
+
+  auto fstatus = std::filesystem::status(out_ref.path);
+  if (!std::filesystem::exists(fstatus)) {
+    throw std::runtime_error(fmt::format(
+        "PathResourceReference({}) resolves to a non-existant file.", refstr));
+  }
+
+  if (!std::filesystem::is_directory(
+          fstatus)) { // if its not a directory and points at anything except a
+                      // submission.yaml and there is also a resourcename, then
+                      // we're pointing at two files at once.
+
+    if (out_ref.path.filename() == "submission.yaml") {
+      out_ref.path = out_ref.path.parent_path();
+    } else if (out_ref.resourcename.size()) {
+      throw std::runtime_error(
+          fmt::format("PathResourceReference({}) resolves to a file={}, but "
+                      "resourcename={}, is also set.",
+                      refstr, out_ref.path.native(), out_ref.resourcename));
+    }
+  } else { // is directory
+    if (!out_ref.resourcename
+             .size()) { // if there is no file, check if submission.yaml exists,
+                        // in which case this is a valid reference to a record.
+      if (!std::filesystem::exists(out_ref.path / "submission.yaml")) {
+        throw std::runtime_error(fmt::format(
+            "PathResourceReference({}) resolves to a directory={}, but "
+            "resourcename is not set and {} does not exist.",
+            refstr, out_ref.path.native(),
+            (out_ref.path / "submission.yaml").native()));
+      }
+    } else { // check if that file exists
+      if (!std::filesystem::exists(out_ref.path / out_ref.resourcename)) {
+        if (std::filesystem::exists(out_ref.path /
+                                    (out_ref.resourcename + ".yaml"))) {
+          return out_ref;
+        }
+        throw std::runtime_error(fmt::format(
+            "PathResourceReference({}) resolves to a directory={}, with "
+            "resourcename={} set, but file={} does not exist.",
+            refstr, out_ref.path.native(), out_ref.resourcename,
+            (out_ref.path / out_ref.resourcename).native()));
+      }
+    }
+  }
+
+  return out_ref;
 }
 
 } // namespace nuis::HEPData

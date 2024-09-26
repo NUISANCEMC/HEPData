@@ -32,8 +32,10 @@ static const char USAGE[] =
       --path                Interpret <ref> as a local path to a submission.yaml
     
 
-    <ref> arguments are of the form: [type:]<id>[/resource[:qualifier]]
-    The <comp> argument can be one of type, id, resource, or qualifier
+    <ref> arguments are of one of two forms: 
+      repository reference) [type:]<id>[/resource[:qualifier]]
+      local path reference) /path/to/submission[:resource[:qualifier]]
+    The <comp> argument can be one of: type, id, resource, or qualifier
     <key> arguments correspond to a specific HEPData qualifier key to reference
 )";
 
@@ -85,8 +87,7 @@ int main(int argc, const char **argv) {
 
   ResourceReference cli_ref;
   if (args["--path"].asBool()) {
-    cli_ref.reftype = "path";
-    cli_ref.refstr = args["<ref>"].asString();
+    cli_ref = PathResourceReference(args["<ref>"].asString());
   } else {
     cli_ref = ResourceReference(args["<ref>"].asString());
   }

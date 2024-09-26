@@ -237,17 +237,24 @@ resolve_reference(ResourceReference const &ref,
                 local_cache_root.native());
 
   if (ref.reftype == "path") {
-    std::filesystem::path resource_path = ref.refstr;
-    
+    auto resource_path = ref.path;
+
     if (ref.resourcename.size()) {
       resource_path /= ref.resourcename;
+    } else if(std::filesystem::exists(resource_path / "submission.yaml")){
+      return resource_path / "submission.yaml";
     }
 
     if (!std::filesystem::exists(resource_path)) {
+
+      if(std::filesystem::exists(resource_path.native() + ".yaml")){
+        return resource_path.native() + ".yaml";
+      }
+
       throw std::runtime_error(
-          fmt::format("Resolving a path-type reference: {} with resourcename "
-                      "{} to path: {}, which does not exist.",
-                      ref.refstr, ref.resourcename, resource_path.native()));
+          fmt::format("Resolving a path-type reference: {} to path: {}, which "
+                      "does not exist.",
+                      ref.str(), resource_path.native()));
     }
     return resource_path;
   }

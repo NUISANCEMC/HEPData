@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -11,6 +12,10 @@ struct ResourceReference {
   std::string reftype;
   size_t recordid;
   int recordvers;
+
+  // type=path references use this instead of recordid and recordvers
+  std::filesystem::path path;
+
   std::string resourcename;
   std::string qualifier;
 
@@ -19,7 +24,7 @@ struct ResourceReference {
   bool valid;
 
   ResourceReference()
-      : reftype{""}, recordid{0}, recordvers{0}, resourcename{""},
+      : reftype{""}, recordid{0}, recordvers{0}, path{}, resourcename{""},
         qualifier{""}, refstr{""}, valid{true} {}
 
   ResourceReference &operator=(const ResourceReference &other) = default;
@@ -37,6 +42,9 @@ struct ResourceReference {
   std::string str() const;
   std::string component(std::string const &comp) const;
 };
+
+// ref format: /path/to/file.yaml[:<resource[:qualifier]>]
+ResourceReference PathResourceReference(std::string const &refstr);
 
 extern ResourceReference const HEPDataRef;
 

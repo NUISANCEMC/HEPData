@@ -430,22 +430,12 @@ Record make_Record(ResourceReference ref,
           continue;
         }
 
-        ResourceReference xsref;
-
-        if (ref.reftype == "path") {
-          xsref = ResourceReference(
-              fmt::format("{}:{}", doc["data_file"].as<std::string>(), dv.name),
-              ref);
-        } else {
-          xsref = ResourceReference(obj.record_ref.str() + "/" +
-                                    doc["data_file"].as<std::string>() + ":" +
-                                    dv.name);
-        }
-
-        spdlog::debug(" + building xs measurement from ref: {}", xsref.str());
-
-        obj.measurements.emplace_back(
-            make_CrossSectionMeasurement(xsref, local_cache_root));
+        obj.measurements.emplace_back(make_CrossSectionMeasurement(
+            ResourceReference(fmt::format("{}:{}",
+                                          doc["data_file"].as<std::string>(),
+                                          dv.name),
+                              ref),
+            local_cache_root));
         obj.measurements.back().name = doc["name"].as<std::string>();
       }
     } else {
@@ -467,20 +457,7 @@ Record make_Record(ResourceReference ref,
 Record make_Record(std::filesystem::path const &location,
                    std::filesystem::path const &local_cache_root) {
 
-  if ((location.filename() != "submission.yaml") ||
-      !std::filesystem::exists(location)) {
-    throw std::runtime_error(
-        fmt::format("make_Record called with a path: {} that did not "
-                    "point to an existing submission.yaml",
-                    location.native()));
-  }
-
-  ResourceReference local_ref;
-  local_ref.reftype = "path";
-  local_ref.resourcename = "submission.yaml";
-  local_ref.refstr = location.parent_path().native();
-
-  return make_Record(local_ref, local_cache_root);
+  return make_Record(PathResourceReference(location), local_cache_root);
 }
 
 } // namespace nuis::HEPData
