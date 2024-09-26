@@ -607,15 +607,15 @@ This repository includes a C++ model of the HEPData conventions described above.
     //   as measurements in general can have multiple groups of composite 
     //   targets, we have to jump through some vector hoops to get the first one
     std::cout << xsm.targets.front().front() << std::endl;
-    // or you can use the get_single_target() helper function, which will throw if there is
-    // more than one target.
+    // or you can use the get_simple_target() helper function, which will throw
+    // if there is more than one target specification.
 
     // print the selection and projection function specifications, same hoops apply
     std::cout << xsm.selectfuncs.front().source.native() << ": " 
       << xsm.selectfuncs.front().fname << std::endl;
     // or you can use the get_single_selectfunc() helper
 
-    // see nuis/HEPData/Tables.hxx for more details
+    // see nuis/HEPData/CrossSectionMeasurement.h for more details
   }
 ```
 

@@ -178,14 +178,6 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
                              std::filesystem::path const &>(
                &HEPData::make_Record),
            py::arg("location"), py::arg("local_cache_root") = ".")
-      .def(
-          "make_Record",
-          [](std::string const &ref,
-             std::filesystem::path const &local_cache_root) {
-            return make_Record(HEPData::ResourceReference(ref),
-                               local_cache_root);
-          },
-          py::arg("ref"), py::arg("local_cache_root") = ".")
       .def("resolve_reference", &HEPData::resolve_reference, py::arg("ref"),
            py::arg("local_cache_root") = ".")
       .def(
