@@ -29,10 +29,10 @@ static const char USAGE[] =
     Options:
       --nuisancedb=<path>   Use <path> as the record database root.
       --debug               Enable logging for any http requests.
-      --path                Interpret <ref> as a local path to a submission.yaml
+      --path                Interpret <ref> as a local path reference
     
 
-    <ref> arguments are of one of two forms: 
+    <ref> arguments are of one of two forms depending on the --path switch: 
       repository reference) [type:]<id>[/resource[:qualifier]]
       local path reference) /path/to/submission[:resource[:qualifier]]
     The <comp> argument can be one of: type, id, resource, or qualifier
