@@ -156,6 +156,8 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
       .def_readonly("resourcename", &HEPData::ResourceReference::resourcename)
       .def_readonly("qualifier", &HEPData::ResourceReference::qualifier);
 
+  m.def("PathResourceReference", &HEPData::PathResourceReference);
+
   m.def("make_CrossSectionMeasurement", &HEPData::make_CrossSectionMeasurement,
         py::arg("ref"), py::arg("local_cache_root") = ".")
       .def(
@@ -166,8 +168,16 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
                                                 local_cache_root);
           },
           py::arg("ref"), py::arg("local_cache_root") = ".")
-      .def("make_Record", &HEPData::make_Record, py::arg("ref"),
-           py::arg("local_cache_root") = ".")
+      .def("make_Record",
+           py::overload_cast<HEPData::ResourceReference,
+                             std::filesystem::path const &>(
+               &HEPData::make_Record),
+           py::arg("ref"), py::arg("local_cache_root") = ".")
+      .def("make_Record",
+           py::overload_cast<std::filesystem::path const &,
+                             std::filesystem::path const &>(
+               &HEPData::make_Record),
+           py::arg("location"), py::arg("local_cache_root") = ".")
       .def(
           "make_Record",
           [](std::string const &ref,
