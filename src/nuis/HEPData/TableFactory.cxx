@@ -122,11 +122,12 @@ std::vector<std::string> split_spec(std::string specstring, char delim = ',') {
   return splits;
 }
 
-std::pair<std::string, double> parse_weight_specifier(std::string specstring) {
+std::pair<std::string, std::optional<double>>
+parse_weight_specifier(std::string specstring) {
 
   auto open_bracket_pos = specstring.find_first_of('[');
 
-  double weight = 1;
+  std::optional<double> weight = std::nullopt;
 
   if (open_bracket_pos != std::string::npos) {
     weight = std::stod(
@@ -148,7 +149,7 @@ parse_probe_fluxes(std::string fluxsstr, ResourceReference ref,
     auto const &[fluxstr, weight] = parse_weight_specifier(spec);
     flux_specs.emplace_back(CrossSectionMeasurement::Weighted<ProbeFlux>{
         make_ProbeFlux(ResourceReference(fluxstr, ref), local_cache_root),
-        weight});
+        weight.value_or(1)});
   }
   return flux_specs;
 }
@@ -221,18 +222,30 @@ tgtstr_to_target(std::string const &tgtstr) {
 CrossSectionMeasurement::TargetList parse_targets(std::string targetsstr) {
 
   CrossSectionMeasurement::TargetList target_specs;
+
+  double smallest_w = std::numeric_limits<double>::max();
   for (auto const &spec : split_spec(targetsstr)) {
 
     auto const &[tgtstr, weight] = parse_weight_specifier(spec);
     auto const &targets = tgtstr_to_target(tgtstr);
 
     for (auto tgt : targets) {
-      // always weight by A so that weights correspond to mass ratio even when
-      // unspecified
-      tgt.weight *= weight * double(tgt->A);
+      // if we have a weight specifier then we need to divide out the the mass,
+      // use A as a proxy so that standard weight gets cancelled
+      if (weight) {
+        tgt.weight *= weight / double(tgt->A);
+      }
+      tgt.weight *= double(tgt->A);
+      smallest_w = std::min(tgt.weight, smallest_w);
       target_specs.emplace_back(tgt);
     }
   }
+
+  // normalize all weights by the smallest
+  for (auto &tgt : target_specs) {
+    tgt.weight /= smallest_w;
+  }
+
   return target_specs;
 }
 
