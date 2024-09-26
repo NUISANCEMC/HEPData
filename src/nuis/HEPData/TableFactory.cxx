@@ -207,7 +207,7 @@ tgtstr_to_target(std::string const &tgtstr) {
     return {wgtgt{CrossSectionMeasurement::Target{16, 8}, 1},
             wgtgt{CrossSectionMeasurement::Target{1, 1}, 2}};
   } else if (tgtstr == "Ar") {
-    return {wgtgt{CrossSectionMeasurement::Target{16, 8}, 1}};
+    return {wgtgt{CrossSectionMeasurement::Target{40, 18}, 1}};
   } else if (tgtstr == "Fe") {
     return {wgtgt{CrossSectionMeasurement::Target{56, 26}, 1}};
   } else if (tgtstr == "Pb") {

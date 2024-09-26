@@ -6,6 +6,8 @@
 #include "nuis/HEPData/StreamHelpers.h"
 #include "nuis/HEPData/TableFactory.h"
 
+#include "spdlog/spdlog.h"
+
 namespace py = pybind11;
 using namespace nuis;
 
@@ -18,24 +20,24 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
            [](std::filesystem::path const &p) { return p.native(); });
   py::implicitly_convertible<std::string, std::filesystem::path>();
 
-  py::class_<HEPData::Extent>(m, "HEPData::Extent")
+  py::class_<HEPData::Extent>(m, "Extent")
       .def_readonly("low", &HEPData::Extent::low)
       .def_readonly("high", &HEPData::Extent::high);
 
-  py::class_<HEPData::Value>(m, "HEPData::Value")
+  py::class_<HEPData::Value>(m, "Value")
       .def_readonly("value", &HEPData::Value::value)
       .def_readonly("errors", &HEPData::Value::errors);
 
-  py::class_<HEPData::Variable>(m, "HEPData::Variable")
+  py::class_<HEPData::Variable>(m, "Variable")
       .def_readonly("values", &HEPData::Variable::values)
       .def_readonly("name", &HEPData::Variable::name)
       .def_readonly("units", &HEPData::Variable::units);
 
-  py::class_<HEPData::DependentVariable, HEPData::Variable>(
-      m, "HEPData::DependentVariable")
+  py::class_<HEPData::DependentVariable, HEPData::Variable>(m,
+                                                            "DependentVariable")
       .def_readonly("qualifiers", &HEPData::DependentVariable::qualifiers);
 
-  py::class_<HEPData::Table>(m, "HEPData::Table")
+  py::class_<HEPData::Table>(m, "Table")
       .def_readonly("source", &HEPData::Table::source)
       .def_readonly("independent_vars", &HEPData::Table::independent_vars)
       .def_readonly("dependent_vars", &HEPData::Table::dependent_vars)
@@ -45,7 +47,7 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
         return ss.str();
       });
 
-  py::class_<HEPData::ProbeFlux, HEPData::Table>(m, "HEPData::ProbeFlux")
+  py::class_<HEPData::ProbeFlux, HEPData::Table>(m, "ProbeFlux")
       .def_readonly("probe_particle", &HEPData::ProbeFlux::probe_particle)
       .def_readonly("bin_content_type", &HEPData::ProbeFlux::bin_content_type)
       .def("__str__", [](HEPData::ProbeFlux const &hpd) {
@@ -54,7 +56,7 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
         return ss.str();
       });
 
-  py::class_<HEPData::ErrorTable, HEPData::Table>(m, "HEPData::ErrorTable")
+  py::class_<HEPData::ErrorTable, HEPData::Table>(m, "ErrorTable")
       .def_readonly("error_type", &HEPData::ErrorTable::error_type)
       .def("__str__", [](HEPData::ErrorTable const &hpd) {
         std::stringstream ss;
@@ -62,8 +64,7 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
         return ss.str();
       });
 
-  py::class_<HEPData::SmearingTable, HEPData::Table>(m,
-                                                     "HEPData::SmearingTable")
+  py::class_<HEPData::SmearingTable, HEPData::Table>(m, "SmearingTable")
       .def("__str__", [](HEPData::SmearingTable const &hpd) {
         std::stringstream ss;
         ss << hpd;
@@ -71,13 +72,13 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
       });
 
   py::class_<HEPData::CrossSectionMeasurement::funcref>(
-      m, "HEPData::CrossSectionMeasurement::funcref")
+      m, "CrossSectionMeasurement_funcref")
       .def_readonly("source",
                     &HEPData::CrossSectionMeasurement::funcref::source)
       .def_readonly("fname", &HEPData::CrossSectionMeasurement::funcref::fname);
 
   py::class_<HEPData::CrossSectionMeasurement::Weighted<HEPData::ProbeFlux>>(
-      m, "HEPData::CrossSectionMeasurement::Weighted<HEPData::ProbeFlux>")
+      m, "CrossSectionMeasurement_Weighted_ProbeFlux")
       .def_readonly(
           "obj",
           &HEPData::CrossSectionMeasurement::Weighted<HEPData::ProbeFlux>::obj)
@@ -85,14 +86,13 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
                                   HEPData::ProbeFlux>::weight);
 
   py::class_<HEPData::CrossSectionMeasurement::Target>(
-      m, "HEPData::CrossSectionMeasurement::Target")
+      m, "CrossSectionMeasurement_Target")
       .def_readonly("A", &HEPData::CrossSectionMeasurement::Target::A)
       .def_readonly("Z", &HEPData::CrossSectionMeasurement::Target::Z);
 
   py::class_<HEPData::CrossSectionMeasurement::Weighted<
       HEPData::CrossSectionMeasurement::Target>>(
-      m, "HEPData::CrossSectionMeasurement::Weighted<HEPData::"
-         "CrossSectionMeasurement::Target>")
+      m, "CrossSectionMeasurement_Weighted_Target")
       .def_readonly("obj", &HEPData::CrossSectionMeasurement::Weighted<
                                HEPData::CrossSectionMeasurement::Target>::obj)
       .def_readonly("weight",
@@ -100,7 +100,7 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
                         HEPData::CrossSectionMeasurement::Target>::weight);
 
   py::class_<HEPData::CrossSectionMeasurement, HEPData::Table>(
-      m, "HEPData::CrossSectionMeasurement")
+      m, "CrossSectionMeasurement")
       .def_readonly("name", &HEPData::CrossSectionMeasurement::name)
       .def_readonly("probe_fluxes",
                     &HEPData::CrossSectionMeasurement::probe_fluxes)
@@ -135,7 +135,7 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
         return ss.str();
       });
 
-  py::class_<HEPData::Record>(m, "HEPData::Record")
+  py::class_<HEPData::Record>(m, "Record")
       .def_readonly("record_root", &HEPData::Record::record_root)
       .def_readonly("record_ref", &HEPData::Record::record_ref)
       .def_readonly("measurements", &HEPData::Record::measurements)
@@ -147,7 +147,7 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
         return ss.str();
       });
 
-  py::class_<HEPData::ResourceReference>(m, "HEPData::ResourceReference")
+  py::class_<HEPData::ResourceReference>(m, "ResourceReference")
       .def(py::init<std::string const &, HEPData::ResourceReference const &>(),
            py::arg("ref"), py::arg("context") = HEPData::ResourceReference())
       .def_readonly("reftype", &HEPData::ResourceReference::reftype)
@@ -188,4 +188,6 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
                                               local_cache_root);
           },
           py::arg("ref"), py::arg("local_cache_root") = ".");
+
+  m.def("enable_debug", []() { spdlog::set_level(spdlog::level::debug); });
 }
