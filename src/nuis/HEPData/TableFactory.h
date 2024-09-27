@@ -13,6 +13,10 @@ ProbeFlux make_ProbeFlux(ResourceReference ref,
 ErrorTable make_ErrorTable(ResourceReference ref,
                            std::filesystem::path const &local_cache_root = ".");
 
+SmearingTable
+make_SmearingTable(ResourceReference ref,
+                   std::filesystem::path const &local_cache_root = ".");
+
 CrossSectionMeasurement make_CrossSectionMeasurement(
     ResourceReference ref, std::filesystem::path const &local_cache_root = ".");
 

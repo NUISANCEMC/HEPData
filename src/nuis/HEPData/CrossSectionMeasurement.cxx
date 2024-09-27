@@ -5,14 +5,14 @@
 namespace nuis::HEPData {
 
 ProbeFlux const &CrossSectionMeasurement::get_single_probe_flux() const {
-  if (probe_fluxes.size() > 1) {
+  if (probe_fluxes.size() != 1) {
     throw std::runtime_error(
         fmt::format("Called CrossSectionMeasurement::get_single_probe_flux "
                     "on a non-simple "
                     "measurement with {} probe_flux specifications.",
                     probe_fluxes.size()));
   }
-  if (probe_fluxes[0].size() > 1) {
+  if (probe_fluxes[0].size() != 1) {
     throw std::runtime_error(
         fmt::format("Called CrossSectionMeasurement::get_single_probe_flux "
                     "on a non-simple "
@@ -24,9 +24,32 @@ ProbeFlux const &CrossSectionMeasurement::get_single_probe_flux() const {
   return *probe_fluxes[0][0];
 }
 
-std::pair<double, double>
-CrossSectionMeasurement::get_simple_target() const {
-  if (targets.size() > 1) {
+ErrorTable const &CrossSectionMeasurement::get_single_errors() const {
+  if (errors.size() != 1) {
+    throw std::runtime_error(
+        fmt::format("Called CrossSectionMeasurement::get_single_errors "
+                    "on a non-simple "
+                    "measurement with {} error specifications.",
+                    errors.size()));
+  }
+
+  return errors[0];
+}
+
+SmearingTable const &CrossSectionMeasurement::get_single_smearing() const {
+  if (smearings.size() != 1) {
+    throw std::runtime_error(
+        fmt::format("Called CrossSectionMeasurement::get_single_smearing "
+                    "on a non-simple "
+                    "measurement with {} error specifications.",
+                    smearings.size()));
+  }
+
+  return smearings[0];
+}
+
+std::pair<double, double> CrossSectionMeasurement::get_simple_target() const {
+  if (targets.size() != 1) {
     throw std::runtime_error(fmt::format(
         "Called CrossSectionMeasurement::get_simple_target on a non-simple "
         "measurement with {} target specifications.",
@@ -50,7 +73,7 @@ CrossSectionMeasurement::get_simple_target() const {
 
 CrossSectionMeasurement::funcref const &
 CrossSectionMeasurement::get_single_selectfunc() const {
-  if (selectfuncs.size() > 1) {
+  if (selectfuncs.size() != 1) {
     throw std::runtime_error(
         fmt::format("Called CrossSectionMeasurement::get_single_selectfunc "
                     "on a non-simple "

@@ -104,6 +104,47 @@ ErrorTable make_ErrorTable(ResourceReference ref,
   return obj;
 }
 
+SmearingTable
+make_SmearingTable(ResourceReference ref,
+                   std::filesystem::path const &local_cache_root) {
+  auto source = resolve_reference(ref, local_cache_root);
+  auto tbl = YAML::LoadFile(source).as<Table>();
+
+  SmearingTable obj;
+  obj.source = source;
+
+  for (auto const &dv : tbl.dependent_vars) {
+
+    if (!dv.qualifiers.count("variable_type") ||
+        (dv.qualifiers.at("variable_type") != "smearing_table")) {
+      continue;
+    }
+
+    if (ref.qualifier.size()) {
+      if (dv.name == ref.qualifier) {
+        obj.independent_vars = tbl.independent_vars;
+        obj.dependent_vars.push_back(dv);
+        break;
+      }
+    } else {
+      obj.independent_vars = tbl.independent_vars;
+      obj.dependent_vars.push_back(dv);
+      break;
+    }
+  }
+
+  if (!obj.dependent_vars.size()) {
+    throw std::runtime_error(fmt::format(
+        "When parsing SmearingTable from ref: \"{}\" failed to find a "
+        "valid dependent variable.",
+        ref.str()));
+  }
+
+  obj.smearing_type = obj.dependent_vars[0].qualifiers["smearing_type"];
+
+  return obj;
+}
+
 std::vector<std::string> split_spec(std::string specstring, char delim = ',') {
   std::vector<std::string> splits;
 
@@ -173,7 +214,7 @@ make_funcref(ResourceReference ref,
 
 inline int NuclearPDGToA(int pid) {
   // ±10LZZZAAAI
-  return (pid / 1) % 1000;
+  return (pid / 10) % 1000;
 }
 
 inline int NuclearPDGToZ(int pid) {
@@ -233,7 +274,7 @@ CrossSectionMeasurement::TargetList parse_targets(std::string targetsstr) {
       // if we have a weight specifier then we need to divide out the the mass,
       // use A as a proxy so that standard weight gets cancelled
       if (weight) {
-        tgt.weight *= weight / double(tgt->A);
+        tgt.weight *= weight.value() / double(tgt->A);
       }
       tgt.weight *= double(tgt->A);
       smallest_w = std::min(tgt.weight, smallest_w);
@@ -365,6 +406,12 @@ make_CrossSectionMeasurement(ResourceReference ref,
        get_indexed_qualifier_values("errors", quals)) {
     obj.errors.emplace_back(
         make_ErrorTable(ResourceReference(errors_spec, ref), local_cache_root));
+  }
+
+  for (auto const &smearing_spec :
+       get_indexed_qualifier_values("smearing", quals)) {
+    obj.smearings.emplace_back(make_SmearingTable(
+        ResourceReference(smearing_spec, ref), local_cache_root));
   }
 
   if (obj.is_composite && quals.count("sub_measurements")) {

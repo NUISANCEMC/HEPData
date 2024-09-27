@@ -22,6 +22,8 @@ struct ErrorTable : public Table {
   std::string error_type;
 };
 
-struct SmearingTable : public Table {};
+struct SmearingTable : public Table {
+  std::string smearing_type;
+};
 
 } // namespace nuis::HEPData

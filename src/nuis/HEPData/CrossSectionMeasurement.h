@@ -51,6 +51,10 @@ struct CrossSectionMeasurement : public Table {
   // these functions will throw if the measurement is not a simple measurement
   // with one entry for the corresponding component
   ProbeFlux const &get_single_probe_flux() const;
+
+  ErrorTable const &get_single_errors() const;
+  SmearingTable const &get_single_smearing() const;
+
   // This works for measurements with a single list of targets, it sums up the
   // weighted proton and neutron numbers of all targets,
   //   e.g. a CH2 target -> A=14, Z=8.
