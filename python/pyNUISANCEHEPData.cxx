@@ -65,11 +65,21 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
       });
 
   py::class_<HEPData::SmearingTable, HEPData::Table>(m, "SmearingTable")
+      .def_readonly("smearing_type", &HEPData::SmearingTable::smearing_type)
+      .def_readonly("truth_binning", &HEPData::SmearingTable::truth_binning)
       .def("__str__", [](HEPData::SmearingTable const &hpd) {
         std::stringstream ss;
         ss << hpd;
         return ss.str();
       });
+
+  py::class_<HEPData::PredictionTable, HEPData::Table>(m, "PredictionTable")
+      .def_readonly("for_measurement",
+                    &HEPData::PredictionTable::for_measurement)
+      .def_readonly("expected_test_statistic",
+                    &HEPData::PredictionTable::expected_test_statistic)
+      .def_readonly("pre_smeared", &HEPData::PredictionTable::pre_smeared)
+      .def_readonly("label", &HEPData::PredictionTable::label);
 
   py::class_<HEPData::CrossSectionMeasurement::funcref>(
       m, "CrossSectionMeasurement_funcref")
@@ -123,6 +133,8 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
                     &HEPData::CrossSectionMeasurement::test_statistic)
       .def_readonly("project_prettynames",
                     &HEPData::CrossSectionMeasurement::project_prettynames)
+      .def_readonly("predictions",
+                    &HEPData::CrossSectionMeasurement::predictions)
       .def("get_single_probe_flux",
            &HEPData::CrossSectionMeasurement::get_single_probe_flux)
       .def("get_simple_target",

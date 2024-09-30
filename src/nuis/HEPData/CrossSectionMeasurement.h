@@ -51,6 +51,9 @@ struct CrossSectionMeasurement : public Table {
   // prettynames for projections that can contain characters inappropriate for
   // an independent variable name. This includes names including latex math.
   std::vector<std::vector<std::string>> project_prettynames;
+
+  std::vector<PredictionTable> predictions;
+
   // these functions will throw if the measurement is not a simple measurement
   // with one entry for the corresponding component
   ProbeFlux const &get_single_probe_flux() const;

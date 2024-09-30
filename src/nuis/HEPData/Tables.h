@@ -24,6 +24,15 @@ struct ErrorTable : public Table {
 
 struct SmearingTable : public Table {
   std::string smearing_type;
+
+  Table truth_binning;
+};
+
+struct PredictionTable : public Table {
+  std::filesystem::path for_measurement;
+  double expected_test_statistic;
+  bool pre_smeared;
+  std::string label;
 };
 
 } // namespace nuis::HEPData

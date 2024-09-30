@@ -145,6 +145,64 @@ make_SmearingTable(ResourceReference ref,
   return obj;
 }
 
+PredictionTable
+make_PredictionTable(ResourceReference ref,
+                     std::filesystem::path const &local_cache_root) {
+  auto source = resolve_reference(ref, local_cache_root);
+  auto tbl = YAML::LoadFile(source).as<Table>();
+
+  PredictionTable obj;
+  obj.source = source;
+
+  for (auto const &dv : tbl.dependent_vars) {
+
+    if (!dv.qualifiers.count("variable_type") ||
+        (dv.qualifiers.at("variable_type") != "cross_section_prediction")) {
+      continue;
+    }
+
+    if (ref.qualifier.size()) {
+      if (dv.name == ref.qualifier) {
+        obj.independent_vars = tbl.independent_vars;
+        obj.dependent_vars.push_back(dv);
+        break;
+      }
+    } else {
+      obj.independent_vars = tbl.independent_vars;
+      obj.dependent_vars.push_back(dv);
+      break;
+    }
+  }
+
+  if (!obj.dependent_vars.size()) {
+    throw std::runtime_error(fmt::format(
+        "When parsing PredictionTable from ref: \"{}\" failed to find a "
+        "valid dependent variable.",
+        ref.str()));
+  }
+
+  auto const &quals = obj.dependent_vars[0].qualifiers;
+
+  obj.for_measurement =
+      quals.count("for_measurement")
+          ? resolve_reference(
+                ResourceReference(quals.at("for_measurement"), ref),
+                local_cache_root)
+          : "";
+
+  obj.expected_test_statistic =
+      quals.count("expected_test_statistic")
+          ? std::stod(quals.at("expected_test_statistic"))
+          : 0xdeadbeef;
+
+  obj.pre_smeared =
+      quals.count("pre_smeared") ? (quals.at("pre_smeared") == "true") : false;
+
+  obj.label = quals.count("label") ? quals.at("label") : "";
+
+  return obj;
+}
+
 std::vector<std::string> split_spec(std::string specstring, char delim = ',') {
   std::vector<std::string> splits;
 
@@ -473,6 +531,8 @@ Record make_Record(ResourceReference ref,
   spdlog::debug("make_Record(ref={}), loading documents from file: {}",
                 ref.str(), submission.native());
 
+  std::vector<PredictionTable> predictions;
+
   auto docs = YAML::LoadAllFromFile(submission.native());
 
   for (auto const &doc : docs) {
@@ -489,18 +549,27 @@ Record make_Record(ResourceReference ref,
                            ? dv.qualifiers.at("variable_type")
                            : "n/a"));
 
-        if (!dv.qualifiers.count("variable_type") ||
-            !valid_variable_types.count(dv.qualifiers.at("variable_type"))) {
+        if (!dv.qualifiers.count("variable_type")) {
           continue;
         }
 
-        obj.measurements.emplace_back(make_CrossSectionMeasurement(
-            ResourceReference(fmt::format("{}:{}",
-                                          doc["data_file"].as<std::string>(),
-                                          dv.name),
-                              ref),
-            local_cache_root));
-        obj.measurements.back().name = doc["name"].as<std::string>();
+        if (valid_variable_types.count(dv.qualifiers.at("variable_type"))) {
+          obj.measurements.emplace_back(make_CrossSectionMeasurement(
+              ResourceReference(fmt::format("{}:{}",
+                                            doc["data_file"].as<std::string>(),
+                                            dv.name),
+                                ref),
+              local_cache_root));
+          obj.measurements.back().name = doc["name"].as<std::string>();
+        } else if (dv.qualifiers.at("variable_type") ==
+                   "cross_section_prediction") {
+          predictions.emplace_back(make_PredictionTable(
+              ResourceReference(fmt::format("{}:{}",
+                                            doc["data_file"].as<std::string>(),
+                                            dv.name),
+                                ref),
+              local_cache_root));
+        }
       }
     } else {
       spdlog::debug("no data_file in doc: ");
@@ -515,6 +584,16 @@ Record make_Record(ResourceReference ref,
       }
     }
   }
+
+  // try and hook up predictions to measurements
+  for (auto const &pred : predictions) {
+    for (auto &xsm : obj.measurements) {
+      if (pred.for_measurement == xsm.source) {
+        xsm.predictions.push_back(pred);
+      }
+    }
+  }
+
   return obj;
 }
 

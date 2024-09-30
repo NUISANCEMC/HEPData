@@ -17,6 +17,10 @@ SmearingTable
 make_SmearingTable(ResourceReference ref,
                    std::filesystem::path const &local_cache_root = ".");
 
+PredictionTable
+make_PredictionTable(ResourceReference ref,
+                     std::filesystem::path const &local_cache_root = ".");
+
 CrossSectionMeasurement make_CrossSectionMeasurement(
     ResourceReference ref, std::filesystem::path const &local_cache_root = ".");
 
