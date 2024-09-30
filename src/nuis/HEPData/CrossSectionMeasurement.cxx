@@ -100,7 +100,38 @@ CrossSectionMeasurement::get_single_projectfuncs() const {
     single_projectfuncs.push_back(projectfuncs[pfi].front());
   }
 
+  if (single_projectfuncs.size() != independent_vars.size()) {
+    throw std::runtime_error(
+        fmt::format("Called CrossSectionMeasurement::get_single_projectfuncs "
+                    "on a non-simple measurement, found {} projectfuncs for {} "
+                    "independent_vars.",
+                    single_projectfuncs.size(), independent_vars.size()));
+  }
+
   return single_projectfuncs;
+}
+
+std::vector<std::string>
+CrossSectionMeasurement::get_single_project_prettynames() const {
+  std::vector<std::string> single_project_prettynames;
+
+  for (size_t pfi = 0; pfi < project_prettynames.size(); ++pfi) {
+    if (project_prettynames[pfi].size() > 1) {
+      throw std::runtime_error(fmt::format(
+          "Called CrossSectionMeasurement::get_single_project_prettynames "
+          "on a non-simple "
+          "measurement with {} groups of project_prettynames for independent "
+          "variable: {}.",
+          project_prettynames[pfi].size(), independent_vars[pfi].name));
+    }
+    if (project_prettynames[pfi].size() == 1) {
+      single_project_prettynames.push_back(project_prettynames[pfi].front());
+    } else {
+      single_project_prettynames.push_back("");
+    }
+  }
+
+  return single_project_prettynames;
 }
 
 } // namespace nuis::HEPData

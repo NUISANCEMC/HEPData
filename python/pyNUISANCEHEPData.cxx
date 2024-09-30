@@ -121,6 +121,8 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
                     &HEPData::CrossSectionMeasurement::cross_section_units)
       .def_readonly("test_statistic",
                     &HEPData::CrossSectionMeasurement::test_statistic)
+      .def_readonly("project_prettynames",
+                    &HEPData::CrossSectionMeasurement::project_prettynames)
       .def("get_single_probe_flux",
            &HEPData::CrossSectionMeasurement::get_single_probe_flux)
       .def("get_simple_target",
@@ -129,6 +131,8 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
            &HEPData::CrossSectionMeasurement::get_single_selectfunc)
       .def("get_single_projectfuncs",
            &HEPData::CrossSectionMeasurement::get_single_projectfuncs)
+      .def("get_single_project_prettynames",
+           &HEPData::CrossSectionMeasurement::get_single_project_prettynames)
       .def("__str__", [](HEPData::CrossSectionMeasurement const &hpd) {
         std::stringstream ss;
         ss << hpd;

@@ -48,6 +48,9 @@ struct CrossSectionMeasurement : public Table {
   // projection functions for the 'y' variable live in projectfuncs[1];
   std::vector<std::vector<funcref>> projectfuncs;
 
+  // prettynames for projections that can contain characters inappropriate for
+  // an independent variable name. This includes names including latex math.
+  std::vector<std::vector<std::string>> project_prettynames;
   // these functions will throw if the measurement is not a simple measurement
   // with one entry for the corresponding component
   ProbeFlux const &get_single_probe_flux() const;
@@ -63,6 +66,7 @@ struct CrossSectionMeasurement : public Table {
   std::pair<double, double> get_simple_target() const;
   funcref const &get_single_selectfunc() const;
   std::vector<funcref> get_single_projectfuncs() const;
+  std::vector<std::string> get_single_project_prettynames() const;
 };
 
 } // namespace nuis::HEPData

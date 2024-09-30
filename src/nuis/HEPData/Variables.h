@@ -26,6 +26,8 @@ struct Variable {
 struct DependentVariable : public Variable {
 
   std::map<std::string, std::string> qualifiers;
+
+  std::string prettyname;
 };
 
 } // namespace nuis::HEPData

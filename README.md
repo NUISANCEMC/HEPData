@@ -1,6 +1,6 @@
 # NUISANCE HEPData Conventions
 
-This document corresponds to version 0.1 of the [NUISANCE](https://github.com/NUISANCEMC/nuisance) HEPData Conventions.
+This document corresponds to version 0.9 of the [NUISANCE](https://github.com/NUISANCEMC/nuisance) HEPData Conventions.
 
 This document aims to provide a set of conventions on top of the established [HEPData format specification](http://hepdata-submission.readthedocs.io) that allow NUISANCE to automatically construct predictions for datasets from simulated vectors of neutrino interactions. These conventions should not limit the type of measurements that can be expressed and are meant to cover the majority of existing published data. 
 
@@ -58,7 +58,7 @@ We define a format for record references as below, where `[]` denote optional co
 
 All parts of the reference are optional. In the absence of a reference `id`, the reference is considered an *intra*-record reference, referring to a resource contained within the same HEPData record. In the absence of a `type`, the reference is considered an *inter*-record reference, referring to a resource contained within another HEPData record. In the absence of a `resource` component, the reference is considered a generic link to another record and not a pointer to a specific resource of that record.
 
-The `type` of a reference is freeform, but outside of the special (and default) `hepdata` type a generic referred resource will not be automatically retrievable. As HEPData uses `INSPIREHEP` id's as a foriegn key for its records, the `inspirehep` type can be used to link to the HEPData record corresponding to a specific INSPIREHEP record. Other useful types might include: `arxiv`, `zenodo`, `doi`, among others. To refer to a specific resource, such as a flux prediction or covariance matrix, the `resource` component should be used. The `qualifier` sub-component is resource specific and is included to enable referring to sub-resources. 
+The `type` of a reference is freeform, but apart from the special (and default) `hepdata` type a generic referred resource will not be automatically retrievable. As HEPData uses INSPIREHEP ids as a foriegn key for its records, the `inspirehep` type can be used to link to the HEPData record corresponding to a specific INSPIREHEP record. Other useful types might include: `arxiv`, `zenodo`, `doi`, among others. To refer to a specific resource, such as a flux prediction or covariance matrix, the `resource` component should be used. The `qualifier` sub-component is resource specific and is included to enable referring to sub-resources. 
 
 Some specific examples with explanations are given below:
 
@@ -84,7 +84,9 @@ Some specific examples with explanations are given below:
 | `variable_type`           | Yes      | `cross_section_measurement` |
 | `measurement_type`        | No       | `flux_averaged_differential_cross_section` |
 | `selectfunc`              | Yes      | `ana.cxx:MicroBooNE_CC0Pi_2019_Selection_123456` |
-| `<var>:projectfunc`       | Yes      | `ana.cxx:MicroBooNE_CC0Pi_2019_DeltaPT_123456`, `ana.cxx:MicroBooNE_CCInc_2017_PMu_4321` |
+| `<var>:projectfunc`       | Yes      | `ana.cxx:MicroBooNE_CC0Pi_2019_DeltaPT_123456`, `ana.cxx:MicroBooNE_CCInc_2017_PMu_4321`|
+| `<var>:prettyname`        | No       | `$p_{\mu}$` |  
+| `prettyname`              | No       | `$\\mathrm{d}\\sigma/\\mathrm{d}p_{\\mu}$` |  
 | `cross_section_units`     | No       | `pb\|per_target_nucleon\|per_first_bin_width` |
 | `target`                  | Yes      | `CH`, `C[12],H[1]`, `1000180400` |
 | `probe_flux`              | Yes      | `123456/MicroBooNE_CC0Pi_2019_flux_numu`, `flux_numu[1],flux_nue[0.9]` |
@@ -98,6 +100,7 @@ Some specific examples with explanations are given below:
 | ------------------------- | -------- | ------------- |
 | `selectfunc[1...]`        | No       | `ana.cxx:MicroBooNE_CC0Pi_2019_Selection_123456` |
 | `<var>:projectfunc[1...]` | No       | `ana.cxx:MicroBooNE_CC0Pi_2019_DeltaPT_123456` |
+| `<var>:prettyname[1...]`  | No       | `$p_{\mu}\\ [\\mathrm{GeV}/c]$` |  
 | `target[1...]`            | No       | `CH`, `C[12],H[1]`, `1000180400` |
 | `probe_flux[1...]`        | No       | `123456/MicroBooNE_CC0Pi_2019_flux_numu`, `flux_numu[1],flux_nue[0.9]` |
 | `sub_measurements`        | No       | `MicroBooNE_CC0Pi_2019_DeltaPTx,MicroBooNE_CC0Pi_2019_DeltaPTy` |
@@ -123,7 +126,17 @@ Some specific examples with explanations are given below:
 | --------------- | -------- | ------------- |
 | `variable_type` | Yes      | `smearing_table` |
 | `smearing_type` | Yes      | `smearing_matrix` |
+| `truth_binning` | no       | `smear_bins` |
 
+* Prediction table qualifiers
+
+| Qualifier Key             | Required | Example Value |
+| ------------------------- | -------- | ------------- |
+| `variable_type`           | Yes      | `cross_section_prediction` |
+| `for_measurement`         | No       | `cross_section` |
+| `expected_test_statistic` | No       | `12.34` |
+| `pre_smeared`             | No       | `true` |
+| `label`                   | No       | `CC Total`, `CC0$\pi$` |
 
 ## 1. Variable Qualifier
 
@@ -136,6 +149,7 @@ The `variable_type` qualifier is used to explicitly mark any _Dependent Variable
 | `probe_flux`                | Use this to mark a variable as describing the flux of a probe particle. |
 | `error_table`               | Use this to mark a variable as describing the error of another measurement. While _Dependent Variables_ can contain bin-by-bin independent errors, a separate table is required to describe a matrix of correlated errors for a measurement. For more details, see [Errors](#errors)|
 | `smearing_table`            | Use this to mark a variable as describing the input to a smearing process from generator 'true' space to the measurement space. For more details, see [Smearing](#smearing)|
+| `cross_section_prediction` | Use this to mark a variable as containing a prediction for a `cross_section_measurement`-type dependent variable. |
 
 ## 2. Measurement Qualifiers
 
@@ -191,7 +205,7 @@ Target materials can be specified by a fully complete syntax, or a useful shorth
 | `1000060120` | A carbon 12 target |
 | `CH` | A hydrocarbon target with an average carbon:hydrogen nuclear ratio of 1:1 |
 | `1000060120,1000010010` | A hydrocarbon target with a nuclear ratio of 1:1 |
-| `1000060120[1],1000010010[1]` | A hydrocarbon target with an average carbon:hydrogen **mass ratio** of 1:1 (equivalent to a nuclear ratio of 1:~12) |
+| `1000060120[1],1000010010[1]` | A hydrocarbon target with an average carbon:hydrogen **mass ratio** of 1:1 (equivalent to a nuclear ratio of about 1:12) |
 | `CH2` | A hydrocarbon target with an average carbon:hydrogen nuclear ratio of 1:2 |
 | `Ar` | An argon 40 target |
 | `1000180400` | An argon 40 target |
@@ -201,7 +215,7 @@ For composite measurments, where multiple, separate targets are needed, addition
 
 ### 2.5 Recommended Test Statistic Qualifiers
 
-Sometimes a naive Chi2 test statistic is not the most appropriate to use for a given data set, or the errors are encoded with a non-gaussian PDF. Some examples currently handled are given as examples here.
+Sometimes a naive chi2 test statistic is not the most appropriate to use for a given data set, or the errors are encoded with a non-gaussian PDF. Some examples currently handled are given as examples here.
 
 | Value               | Comments |
 | --------------------| -------- |
@@ -209,6 +223,8 @@ Sometimes a naive Chi2 test statistic is not the most appropriate to use for a g
 | `shape_only_chi2` | |
 | `shape_plus_norm_chi2` |  |
 | `poisson_pdf` | |
+
+It is very useful if data releases are packaged with an example prediction with the expected test statistic value so that a degree of automated validation can take place. See [7. Predictions](#7-Predictions) for more information.
 
 ### 2.6 Related Table Qualifiers
 
@@ -219,6 +235,10 @@ The remaining measurement _Qualifiers_ all comprise references to other tables t
 | `probe_flux`  | One or more comma-separated [Resource References](#resource-reference) to [Probe Flux](#probe-flux) tables. If multiple references are specified, the cross section from each flux will be weighted by the ratio of the integrals of the referenced flux tables by default. Relative weights for the different components can be forced similarly to the [Target](#2.4-target-specification-qualifiers) specifiers. For example, `flux_numu[1],flux_nue[2]` would produce a combined event rate for the two flux components with the contribution from `flux_nue` scaled up by 2. |
 | `errors`      | A simple, single [Resource Reference](#resource-reference) to a table describing the correlated errors for this measurement. For more details, see [Errors](#errors). |
 | `smearing`    | A simple, single [Resource Reference](#resource-reference) to a table describing the smearing procedure for this measurment. For more details, see [Smearing](#smearing). |
+
+### 2.7 Pretty Name Qualifiers
+
+The `<var>:prettyname` _Qualifier_ can be used to improve the labelling of automatically constructed comparison figures. The structue of the value is fairly freeform, but the expected use is for small latex snippets that plotting software would be able to render. Note that the pretty name should generally not include the units, as they can be retrieved from the independent variable header on the relevant table. Similarly the `prettyname` _Qualifier_ can be used to provide a pretty name for the dependent variable with a similar caveat about the units.
 
 ## 3. Composite Measurements
 
@@ -285,15 +305,30 @@ While Error tables should use the same format as data tables, the yaml file for 
 
 ## 6. Smearing
 
-Publishing non-true space measurements and smearing procedures is relatively rare, but is becoming more common thanks to the desireable statistical properties of techniques like Wiener SVD unfolding. The only valid _Qualifier_ for a smearing table is `smearing_type=smearing_matrix`. The _Independent Variable_ should be defined as in [Errors](#errors).
+Publishing non-true space measurements and smearing procedures is relatively rare, but is becoming more common thanks to the desireable statistical properties of techniques like Wiener SVD unfolding. The only valid value for the `smearing_type` _Qualifier_ is `smearing_type=smearing_matrix`. The _Independent Variable_ should be defined as in [Errors](#errors). 
+
+If a qualifier keyed `truth_binning` exists and its value is a resource reference to a table with independent variables, the binning scheme defined by those variables will be used to bin the unsmeared prediction, prior to smearing to the comparison space. This allows for different true/smeared binning schemes and non-rectangular smearing matrices, where appropriate. A `variable_type=cross_section_prediction` type dependent variable with `pre_smeared=false` can be useful to use to define the true binning and facilitate automated testing of the smearing procedure. In the absence of this qualifier, the binning scheme defined on the original `variable_type=[composite_]cross_section_measurement` table will be used, as for measurements without a smearing component.
 
 While Smearing tables should use the same format as data tables, the yaml file for the table can be included as an additional resource on the record or on the corresponding measurement table. The file size limits differ for tables and additional resources and smearing matrices for many-binned measurements can be quite large as an uncompressed yaml file.
 
-## Analysis Snippets
+## 7. Predictions
+
+While it is very difficult to fully test something as complicated as a cross section measurement, including analyser-checked predictions, with associated pre-calculated test statistic values, can be very useful for users of the data.
+
+One or more model predictions may be included with a data release. Often it is simplest to include the predictions as secondary dependent variables on the relevant table, to avoid duplicating the definition of the independent variables. The following _Qualifiers_ can be used to decorate a dependent variable as a prediction
+
+| Qualifier Key | Comments |
+| ------------- | -------- |
+| `for_measurement` | If this _Qualifier_ is not present, then the prediction will be assumed to be for the first dependent variable of the `[composite]_cross_section_measurement` type on the same table. |
+| `expected_test_statistic` | A precalculated numerical value of the expected test statistic between this prediction and the measurement. Can be used for a limited degree of automatic test statistic validation. |
+| `pre_smeared`         | Can be `true` or `false`. If the measurement that this prediction is for contains a smearing step, this marks whether the smearing has already been applied to this prediction. It is often a better test to provide an unsmeared prediction, to enable automated testing to also test the smearing procedures. Both `pre_smeared=true` and `pre_smeared=false` predictions can be included for a single measurement. |
+| `label` | A free-form test label that can be used to succinctly describe a prediction; it is often useful to include sub-components of a full measurement prediction and the label can be used to differentiate them. May be included a legend titles in automated comparison plots. |
+
+## 8. Analysis Snippets
 
 Analysis Snippets are relatively short C++ source files that contain implementations of event selection and projection operators. These should be written to work with the [ProSelecta](https://github.com/NUISANCEMC/ProSelecta) environment. Generally they are included as a single _Additional Resource_ file per record, which contains all of the functions used by that record.
 
-### Function Naming Conventions
+### 8.1 Function Naming Conventions
 
 To avoid problems that would be encountered from sequentially loading multiple analysis snippets containing identically named functions, we provide a naming convention for selection and projection functions that should be followed where possible.
 
@@ -437,7 +472,7 @@ def nd280_analysis():
   CosThetaVar = Variable("cos_theta_mu", is_independent=True, is_binned=True, units="")
   CosThetaVar.values = nd280_analysis_binning[:,1:3] 
 
-  PVar = Variable("p_mu", is_independent=True, is_binned=True, units="MeV/c")
+  PVar = Variable("p_mu", is_independent=True, is_binned=True, units=r"$\mathrm{MeV}/c$")
   PVar.values = nd280_analysis_binning[:,3:5] / 1E3
 
   xsec_data_mc = np.genfromtxt("onoffaxis_data_release/xsec_data_mc.csv",
@@ -447,7 +482,7 @@ def nd280_analysis():
   nd280_data_mc = xsec_data_mc[:58,...]
 
   CrossSection = Variable("cross_section", is_independent=False, is_binned=False, 
-                          units="$cm${}^{2} c/MeV /Nucleon$")
+                          units=r"$\mathrm{cm}^{2} c/\mathrm{MeV} /\mathrm{Nucleon}$")
   CrossSection.values = nd280_data_mc[:,1]
 
   # qualify the variable type and measurement type
@@ -457,7 +492,10 @@ def nd280_analysis():
   # add the selection and projection ProSelecta function reference qualifiers
   CrossSection.add_qualifier("selectfunc", "analysis.cxx:T2K_CC0Pi_onoffaxis_nu_SelectSignal")
   CrossSection.add_qualifier("cos_theta_mu:projectfunc", "analysis.cxx:T2K_CC0Pi_onoffaxis_nu_Project_CosThetaMu")
+  CrossSection.add_qualifier("p_mu:prettyname", r"$cos(\theta_{\mu})$")
   CrossSection.add_qualifier("p_mu:projectfunc", "analysis.cxx:T2K_CC0Pi_onoffaxis_nu_Project_PMu")
+  CrossSection.add_qualifier("p_mu:prettyname", r"$p_{\mu}$")
+  CrossSection.add_qualifier("prettyname", r"$d^2\sigma/dp_{\mu}dcos(\theta_{\mu})$")
 
   # add the target specifier and probe_flux reference qualifiers
   CrossSection.add_qualifier("target", "CH")
@@ -758,7 +796,7 @@ A lot of useful metadata is stored in the qualifiers of dependent variables, we 
 $ nuis-hepdata --nuisancedb ./database get-qualifiers hepdata-sandbox:1713531371v1/cross_section-onaxis:cross_section
 cos_theta_mu:projectfunc: analysis.cxx:T2K_CC0Pi_onoffaxis_nu_Project_CosThetaMu
 p_mu:projectfunc: analysis.cxx:T2K_CC0Pi_onoffaxis_nu_Project_PMu
-pretty_name: $p_{\mu}$
+p_mu:pretty_name: $p_{\mu}$
 probe_flux: flux-onaxis-postfit-fine
 selectfunc: analysis.cxx:T2K_CC0Pi_onoffaxis_nu_SelectSignal
 target: CH

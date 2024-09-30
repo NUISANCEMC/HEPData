@@ -394,6 +394,10 @@ make_CrossSectionMeasurement(ResourceReference ref,
       obj.projectfuncs.back().emplace_back(
           make_funcref(ResourceReference(ivpf, ref), local_cache_root));
     }
+
+    obj.project_prettynames.emplace_back();
+    obj.project_prettynames.back() = get_indexed_qualifier_values(
+        fmt::format("{}:prettyname", ivar.name), quals, !obj.is_composite);
   }
 
   for (auto const &probe_flux_spec :

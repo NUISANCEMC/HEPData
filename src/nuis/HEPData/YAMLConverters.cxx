@@ -70,8 +70,13 @@ bool convert<HEPData::DependentVariable>::decode(
   var.values = ivar.values;
 
   for (auto const &qual : node["qualifiers"]) {
-    var.qualifiers[qual["name"].as<std::string>()] =
+    auto const & qkey = qual["name"].as<std::string>();
+    var.qualifiers[qkey] =
         qual["value"].as<std::string>();
+
+    if(qkey == "prettyname"){
+      var.prettyname = var.qualifiers[qkey];
+    }
   }
 
   return true;
