@@ -455,7 +455,7 @@ make_CrossSectionMeasurement(ResourceReference ref,
 
     obj.project_prettynames.emplace_back();
     obj.project_prettynames.back() = get_indexed_qualifier_values(
-        fmt::format("{}:prettyname", ivar.name), quals, !obj.is_composite);
+        fmt::format("{}:prettyname", ivar.name), quals, false);
   }
 
   for (auto const &probe_flux_spec :
