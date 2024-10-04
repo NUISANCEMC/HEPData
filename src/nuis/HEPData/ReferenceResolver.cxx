@@ -6,12 +6,23 @@
 
 #include "fmt/core.h"
 
+#include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/spdlog.h"
 
 #include <fstream>
 #include <iostream>
 
 namespace nuis::HEPData {
+
+static std::shared_ptr<spdlog::logger> refresolv_logger = nullptr;
+
+spdlog::logger &refresolv_log() {
+  if (!refresolv_logger) {
+    refresolv_logger = spdlog::stdout_color_mt("NHPD-RefResolv");
+    refresolv_logger->set_pattern("[NHPD RefResolv:%L]: %v");
+  }
+  return *refresolv_logger;
+}
 
 std::filesystem::path
 get_expected_record_location(ResourceReference const &ref,
@@ -71,12 +82,15 @@ ensure_local_path(ResourceReference const &ref,
 
   std::string yaml_opt = expected_location.extension().empty() ? "[.yaml]" : "";
 
-  spdlog::debug("ensure_local_path(ref={},local_cache_root={}): "
-                "expected_location = {}{}",
-                ref.str(), local_cache_root.native(),
-                expected_location.native(), yaml_opt);
+  refresolv_log().debug(
+      R"(   * ensure_local_path for {} (local_cache_root={}))", ref.str(),
+      local_cache_root.native());
+  refresolv_log().debug(R"(   * expected resource location = {}{})",
+                        expected_location.native(), yaml_opt);
 
   if (std::filesystem::exists(expected_location)) {
+    refresolv_log().debug("   *-> expected resource location exists: {}",
+                          expected_location.native());
     return expected_location;
   }
 
@@ -84,10 +98,18 @@ ensure_local_path(ResourceReference const &ref,
   expected_location_yaml += ".yaml";
   // also check if the resource is the table name with a corresponding yaml file
   if (std::filesystem::exists(expected_location_yaml)) {
+    refresolv_log().debug(
+        "   *-> expected resource location with .yaml extension exists: {}",
+        expected_location.native());
     return expected_location_yaml;
   }
 
   auto record_location = get_expected_record_location(ref, local_cache_root);
+
+  refresolv_log().debug(
+      "   * Failed to directly resolve to a resource, checking "
+      "expected record location: {}",
+      record_location.native());
 
   // if the submission exists, then it is likely that this resource is mispelled
   if (std::filesystem::exists(record_location)) {
@@ -98,7 +120,7 @@ ensure_local_path(ResourceReference const &ref,
     }
 
     throw std::runtime_error(fmt::format(
-        "Failed to resolve reference: {} to a file in the submission "
+        "Failed to resolve reference: {} to a file in the record "
         "directory: "
         "{}, with contents:\n{}\n\nIs the resourcename, {}, correct?",
         ref.str(), record_location.native(), dir_contents.str(),
@@ -118,13 +140,15 @@ ensure_local_path(ResourceReference const &ref,
 
   cpr::Url Endpoint = get_record_endpoint(ref);
 
-  spdlog::debug("Doesn't exist, downloading...");
-  spdlog::debug("  GET {} -> {} ", Endpoint.str(), download_location.native());
+  refresolv_log().debug("   * No local copy of the record found");
+  refresolv_log().debug("     * Try to fetch remote reference:");
+  refresolv_log().debug("       * GET {} -> {} ", Endpoint.str(),
+                        download_location.native());
 
   cpr::Response r =
       cpr::Download(of, Endpoint, cpr::Parameters{{"format", "original"}});
 
-  spdlog::debug("   http response --> {} ", r.status_code);
+  refresolv_log().debug("       * http response code: {} ", r.status_code);
 
   if (r.status_code != 200) {
     throw std::runtime_error(
@@ -138,14 +162,14 @@ ensure_local_path(ResourceReference const &ref,
   }
 
   std::string redir = "&>/dev/null";
-  if (spdlog::get_level() <= spdlog::level::debug) {
+  if (refresolv_log().level() <= spdlog::level::debug) {
     redir = "";
   }
 
   auto unzip_command = fmt::format("cd {} && unzip submission.zip {}",
                                    record_location.native(), redir);
 
-  spdlog::debug("  unzipping: system({})", unzip_command);
+  refresolv_log().debug("     * unzipping: system({})", unzip_command);
 
   auto errc = std::system(unzip_command.c_str());
   if (errc) {
@@ -155,13 +179,16 @@ ensure_local_path(ResourceReference const &ref,
   std::filesystem::remove(download_location);
 
   if (std::filesystem::exists(expected_location)) {
-    spdlog::debug("  resolved to: {}", expected_location.native());
+    refresolv_log().debug("   *-> resolved to newly downloaded file: {}",
+                          expected_location.native());
     return expected_location;
   }
 
   // also check if the resource is the table name with a corresponding yaml file
   if (std::filesystem::exists(expected_location_yaml)) {
-    spdlog::debug("  resolved to: {}", expected_location_yaml.native());
+    refresolv_log().debug(
+        "    *-> resolved to newly downloaded file with .yaml extension: {}",
+        expected_location_yaml.native());
     return expected_location_yaml;
   }
 
@@ -188,12 +215,13 @@ ResourceReference resolve_version(ResourceReference ref) {
                          // is
     cpr::Url Endpoint = get_record_endpoint(ref);
 
-    spdlog::debug("Checking latest version for unversioned ref={}", ref.str());
-    spdlog::debug("  GET {}", Endpoint.str());
+    refresolv_log().debug(
+        "    * Checking latest version for unversioned ref={}", ref.str());
+    refresolv_log().debug("      * GET {}", Endpoint.str());
 
     cpr::Response r = cpr::Get(Endpoint, cpr::Parameters{{"format", "json"}});
 
-    spdlog::debug("   http response --> {} ", r.status_code);
+    refresolv_log().debug("      * http response --> {} ", r.status_code);
 
     if (r.status_code != 200) {
       throw std::runtime_error(
@@ -209,8 +237,8 @@ ResourceReference resolve_version(ResourceReference ref) {
     auto respdoc = YAML::Load(r.text);
 
     ref.recordvers = respdoc["version"].as<int>();
-    spdlog::debug("  resolved reference with concrete version to: {}",
-                  ref.str());
+    refresolv_log().debug(
+        "    *-> resolved reference with concrete version to: {}", ref.str());
   }
 
   return ref;
@@ -220,7 +248,11 @@ std::filesystem::path
 resolve_reference_HEPData(ResourceReference ref,
                           std::filesystem::path const &local_cache_root) {
 
+  refresolv_log().debug(R"(  * remote reference resolution)");
+
   if (ref.reftype == "inspirehep") {
+    refresolv_log().debug(
+        R"(  * inspirehep type reference must exist in local cache)");
     return ensure_local_path(ref, local_cache_root);
   }
 
@@ -233,29 +265,40 @@ std::filesystem::path
 resolve_reference(ResourceReference const &ref,
                   std::filesystem::path const &local_cache_root) {
 
-  spdlog::trace("resolve_reference(ref={},local_cache_root={})", ref.str(),
-                local_cache_root.native());
+  refresolv_log().debug(R"(* resolve_reference: {} (local_cache_root={}))",
+                        ref.str(), local_cache_root.native());
 
   if (ref.reftype == "path") {
     auto resource_path = ref.path;
 
+    refresolv_log().debug(R"(  * path type reference resolution)");
+
     if (ref.resourcename.size()) {
       resource_path /= ref.resourcename;
-    } else if(std::filesystem::exists(resource_path / "submission.yaml")){
+    } else if (std::filesystem::exists(resource_path / "submission.yaml")) {
+      refresolv_log().debug(R"(  *-> resolved to existing path: {})",
+                            (resource_path / "submission.yaml").native());
       return resource_path / "submission.yaml";
     }
 
     if (!std::filesystem::exists(resource_path)) {
 
-      if(std::filesystem::exists(resource_path.native() + ".yaml")){
+      if (std::filesystem::exists(resource_path.native() + ".yaml")) {
+        refresolv_log().debug(R"(  *-> resolved to existing path: {}.yaml)",
+                              resource_path.native());
         return resource_path.native() + ".yaml";
       }
+
+      refresolv_log().critical(R"(  * expected path does not exist: {})",
+                               resource_path.native());
 
       throw std::runtime_error(
           fmt::format("Resolving a path-type reference: {} to path: {}, which "
                       "does not exist.",
                       ref.str(), resource_path.native()));
     }
+    refresolv_log().debug(R"(  *-> resolved to existing path: {})",
+                          resource_path.native());
     return resource_path;
   }
 

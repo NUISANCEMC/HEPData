@@ -11,6 +11,14 @@
 namespace py = pybind11;
 using namespace nuis;
 
+// forward declare these here to ensure loggers have been instantiated, don't
+// want to bleed spdlog into the public API
+namespace nuis::HEPData {
+spdlog::logger &refresolv_log();
+spdlog::logger &ref_log();
+spdlog::logger &rec_log();
+} // namespace nuis::HEPData
+
 PYBIND11_MODULE(pyNUISANCEHEPData, m) {
   m.doc() = "pyNUISANCEHEPData implementation in python";
 
@@ -205,5 +213,32 @@ PYBIND11_MODULE(pyNUISANCEHEPData, m) {
           },
           py::arg("ref"), py::arg("local_cache_root") = ".");
 
-  m.def("enable_debug", []() { spdlog::set_level(spdlog::level::debug); });
+  m.def(
+       "enable_debug",
+       [](std::string const &stream) {
+         if (!stream.size() || (stream == "RefResolv")) {
+           nuis::HEPData::refresolv_log().set_level(spdlog::level::debug);
+         }
+         if (!stream.size() || (stream == "Ref")) {
+           nuis::HEPData::ref_log().set_level(spdlog::level::debug);
+         }
+         if (!stream.size() || (stream == "RecFact")) {
+           nuis::HEPData::rec_log().set_level(spdlog::level::debug);
+         }
+       },
+       py::arg("stream") = "")
+      .def(
+          "disable_debug",
+          [](std::string const &stream) {
+            if (!stream.size() || (stream == "RefResolv")) {
+              nuis::HEPData::refresolv_log().set_level(spdlog::level::warn);
+            }
+            if (!stream.size() || (stream == "Ref")) {
+              nuis::HEPData::ref_log().set_level(spdlog::level::warn);
+            }
+            if (!stream.size() || (stream == "RecFact")) {
+              nuis::HEPData::rec_log().set_level(spdlog::level::warn);
+            }
+          },
+          py::arg("stream") = "");
 }

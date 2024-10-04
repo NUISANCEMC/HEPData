@@ -24,7 +24,6 @@ struct ErrorTable : public Table {
 
 struct SmearingTable : public Table {
   std::string smearing_type;
-
   Table truth_binning;
 };
 

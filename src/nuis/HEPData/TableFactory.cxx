@@ -8,9 +8,20 @@
 
 #include "yaml-cpp/yaml.h"
 
+#include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/spdlog.h"
 
 namespace nuis::HEPData {
+
+static std::shared_ptr<spdlog::logger> rec_logger = nullptr;
+
+spdlog::logger &rec_log() {
+  if (!rec_logger) {
+    rec_logger = spdlog::stdout_color_mt("NHPD-RecFact");
+    rec_logger->set_pattern("[NHPD   RecFact:%L]: %v");
+  }
+  return *rec_logger;
+}
 
 ProbeFlux make_ProbeFlux(ResourceReference ref,
                          std::filesystem::path const &local_cache_root) {
@@ -523,31 +534,37 @@ Record make_Record(ResourceReference ref,
                    std::filesystem::path const &local_cache_root) {
   Record obj;
 
+  rec_log().debug("+ Parse record from reference: {}", ref.str());
+
   ref = resolve_version(ref);
 
   obj.record_ref = ref.record_ref();
   auto submission = resolve_reference(obj.record_ref, local_cache_root);
   obj.record_root = submission.parent_path();
-  spdlog::debug("make_Record(ref={}), loading documents from file: {}",
-                ref.str(), submission.native());
+
+  rec_log().debug("  + reading documents from file: {}", submission.native());
 
   std::vector<PredictionTable> predictions;
 
   auto docs = YAML::LoadAllFromFile(submission.native());
 
+  int doc_i = -1;
   for (auto const &doc : docs) {
+    doc_i++;
+    rec_log().debug("  + document #{}", doc_i);
+
     if (doc["data_file"]) {
       auto data_file_path =
           obj.record_root / doc["data_file"].as<std::string>();
       auto tbl = YAML::LoadFile(data_file_path.native()).as<Table>();
 
-      spdlog::debug("  -> loading data_file: {}", data_file_path.native());
+      rec_log().debug("    + loading data_file: {}", data_file_path.native());
 
       for (auto const &dv : tbl.dependent_vars) {
-        spdlog::debug("    -> dependent_variable(name={}, type={})", dv.name,
-                      (dv.qualifiers.count("variable_type")
-                           ? dv.qualifiers.at("variable_type")
-                           : "n/a"));
+        rec_log().debug("      + dependent_variable(name={}, type={})", dv.name,
+                        (dv.qualifiers.count("variable_type")
+                             ? dv.qualifiers.at("variable_type")
+                             : "n/a"));
 
         if (!dv.qualifiers.count("variable_type")) {
           continue;
@@ -571,9 +588,6 @@ Record make_Record(ResourceReference ref,
               local_cache_root));
         }
       }
-    } else {
-      spdlog::debug("no data_file in doc: ");
-      YAML::Dump(doc);
     }
 
     for (auto const &addres : doc["additional_resources"]) {
@@ -593,6 +607,9 @@ Record make_Record(ResourceReference ref,
       }
     }
   }
+
+  rec_log().debug("  +-> parsed record with {} cross section measurements.",
+                  obj.measurements.size());
 
   return obj;
 }
