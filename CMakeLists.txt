@@ -163,7 +163,7 @@ CPMFindPackage(
             "YAML_BUILD_SHARED_LIBS ON"
 )
 
-CPMAddPackage(
+CPMFindPackage(
     NAME spdlog
     VERSION 1.10.0
     GIT_TAG v1.10.0
