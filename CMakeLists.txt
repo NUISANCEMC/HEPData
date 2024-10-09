@@ -221,14 +221,18 @@ install(FILES
     ${CMAKE_BINARY_DIR}/NUISANCEHEPDataConfigVersion.cmake 
   DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/NUISANCEHEPData)
 
-if(NUISANCEHEPData_ENABLE_TESTS)
+# if(NUISANCEHEPData_ENABLE_TESTS)
 
-  CPMAddPackage("gh:catchorg/Catch2@3.3.2")
+#   CPMFindPackage(
+#       NAME Catch2
+#       GITHUB_REPOSITORY catchorg/Catch2
+#       VERSION 3.3.2
+#   )
 
-  LIST(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/extras)
+#   LIST(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/extras)
 
-  include(CTest)
-  include(Catch)
+#   include(CTest)
+#   include(Catch)
 
-  add_subdirectory(tests)
-endif()
+#   add_subdirectory(tests)
+# endif()
