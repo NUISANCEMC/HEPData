@@ -148,6 +148,19 @@ if(NOT "${cpr_SOURCE_DIR}x" STREQUAL "x")
           EXPORT NUISANCEHEPData-targets)
 endif()
 
+if(NOT TARGET CURL::libcurl_shared)
+  get_target_property(LIBCURLLOC CURL::libcurl IMPORTED_LOCATION)
+  #hack in an alias because we found a shared library
+  get_filename_component(LIBCURLEXT ${LIBCURLLOC} EXT)
+  if("${LIBCURLEXT}" STREQUAL ".so")
+    add_library(CURL::libcurl_shared ALIAS CURL::libcurl)
+  endif()
+endif()
+
+if(NOT TARGET CURL::libcurl_shared)
+  message(FATAL_ERROR "Failed to find libcurl_shared")
+endif()
+
 CPMFindPackage(
     NAME yaml-cpp
     VERSION 0.8.0

@@ -71,7 +71,19 @@ int main(int argc, const char **argv) {
   } else {
     auto nuisancedb = std::getenv("NUISANCEDB");
     if (nuisancedb) {
-      local_cache_root = nuisancedb;
+
+      std::string nuisancedbs = nuisancedb;
+      auto tilde = nuisancedbs.find_first_of("~");
+      if (tilde != std::string::npos) {
+        auto homedir = std::getenv("HOME");
+        if (!homedir) {
+          throw std::runtime_error(
+              "Failed to expand HOME environment variable");
+        }
+        nuisancedbs.replace(tilde, tilde + 1, homedir);
+      }
+
+      local_cache_root = nuisancedbs;
     }
   }
 
@@ -80,9 +92,10 @@ int main(int argc, const char **argv) {
   }
 
   if (!std::filesystem::exists(local_cache_root)) {
-    throw std::runtime_error(
-        fmt::format("record database root directory: {}, does not exist.",
-                    local_cache_root.native()));
+    throw std::runtime_error(fmt::format(
+        "record database root directory: {}, does not exist. If this location "
+        "is where you intend the database to be, please make the directory.",
+        local_cache_root.native()));
   }
 
   ResourceReference cli_ref;
