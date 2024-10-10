@@ -126,12 +126,6 @@ install(TARGETS nuishpd_options
 add_library(NUISANCEHEPData::Options ALIAS nuishpd_options)
 
 include(CPM)
-CPMFindPackage(
-    NAME pybind11
-    VERSION 2.9.2
-    GITHUB_REPOSITORY pybind/pybind11
-    GIT_TAG "v2.9.2"
-)
 
 CPMFindPackage(
     NAME fmt
@@ -143,9 +137,9 @@ CPMFindPackage(
 
 CPMFindPackage(
     NAME cpr
-    VERSION 1.10.5
+    VERSION 1.10.4
     GITHUB_REPOSITORY libcpr/cpr
-    GIT_TAG "1.10.5"
+    GIT_TAG "1.10.4"
 )
 
 # cpr doesn't include its own export set, add it to ours
@@ -182,6 +176,14 @@ CPMAddPackage(
 add_library(docopt::docopt ALIAS docopt)
 
 if(NUISANCEHEPData_PYTHON_ENABLED)
+
+  CPMFindPackage(
+      NAME pybind11
+      VERSION 2.9.2
+      GITHUB_REPOSITORY pybind/pybind11
+      GIT_TAG "v2.9.2"
+  )
+
   find_package(Python3 REQUIRED)
 endif()
 
