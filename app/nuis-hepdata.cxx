@@ -4,8 +4,7 @@
 
 #include "docopt.h"
 
-#include "fmt/core.h"
-
+#include "spdlog/fmt/bundled/core.h"
 #include "spdlog/spdlog.h"
 
 #include "yaml-cpp/yaml.h"

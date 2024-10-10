@@ -125,40 +125,39 @@ install(TARGETS nuishpd_options
 
 add_library(NUISANCEHEPData::Options ALIAS nuishpd_options)
 
-include(CPM)
+include(get_cpm)
 
-CPMFindPackage(
-    NAME fmt
-    GIT_TAG 8.1.1
-    GITHUB_REPOSITORY fmtlib/fmt
-    OPTIONS "FMT_INSTALL ON" 
-            "BUILD_SHARED_LIBS ON"
-)
+set(NUISANCEHEPData_CPR_USE_SYSTEM_CURL ON)
+find_package(CURL QUIET)
+if(NOT CURL_FOUND)
+  set(NUISANCEHEPData_CPR_USE_SYSTEM_CURL OFF)
+endif()
 
 CPMFindPackage(
     NAME cpr
     VERSION 1.10.4
     GITHUB_REPOSITORY libcpr/cpr
     GIT_TAG "1.10.4"
+    OPTIONS "CPR_USE_SYSTEM_CURL ${NUISANCEHEPData_CPR_USE_SYSTEM_CURL}"
 )
 
 if(NOT "${cpr_SOURCE_DIR}x" STREQUAL "x")
   # cpr doesn't include its own export set, if we are building it, add it to ours
   install(TARGETS cpr
           EXPORT NUISANCEHEPData-targets)
-endif()
-
-if(NOT TARGET CURL::libcurl_shared)
-  get_target_property(LIBCURLLOC CURL::libcurl IMPORTED_LOCATION)
-  #hack in an alias because we found a shared library
-  get_filename_component(LIBCURLEXT ${LIBCURLLOC} EXT)
-  if("${LIBCURLEXT}" STREQUAL ".so")
-    add_library(CURL::libcurl_shared ALIAS CURL::libcurl)
+else()
+  if(NOT TARGET CURL::libcurl_shared)
+    get_target_property(LIBCURLLOC CURL::libcurl IMPORTED_LOCATION)
+    #hack in an alias because we found a shared library
+    get_filename_component(LIBCURLEXT ${LIBCURLLOC} EXT)
+    if("${LIBCURLEXT}" STREQUAL ".so")
+      add_library(CURL::libcurl_shared ALIAS CURL::libcurl)
+    endif()
   endif()
-endif()
 
-if(NOT TARGET CURL::libcurl_shared)
-  message(FATAL_ERROR "Failed to find libcurl_shared")
+  if(NOT TARGET CURL::libcurl_shared)
+    message(FATAL_ERROR "Failed to find libcurl_shared")
+  endif()
 endif()
 
 CPMFindPackage(
@@ -174,10 +173,10 @@ CPMFindPackage(
 
 CPMFindPackage(
     NAME spdlog
-    VERSION 1.10.0
-    GIT_TAG v1.10.0
+    VERSION 1.14.1
+    GIT_TAG v1.14.1
     GITHUB_REPOSITORY gabime/spdlog
-    OPTIONS
+    OPTIONS 
         "SPDLOG_COMPILED_LIB ON"
         "SPDLOG_BUILD_SHARED ON"
         "SPDLOG_INSTALL ON"
@@ -194,9 +193,9 @@ if(NUISANCEHEPData_PYTHON_ENABLED)
 
   CPMFindPackage(
       NAME pybind11
-      VERSION 2.9.2
+      VERSION 2.13.6
       GITHUB_REPOSITORY pybind/pybind11
-      GIT_TAG "v2.9.2"
+      GIT_TAG "v2.13.6"
   )
 
   find_package(Python3 REQUIRED)
