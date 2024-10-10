@@ -142,9 +142,11 @@ CPMFindPackage(
     GIT_TAG "1.10.4"
 )
 
-# cpr doesn't include its own export set, add it to ours
-install(TARGETS cpr
-        EXPORT NUISANCEHEPData-targets)
+if(NOT "${cpr_SOURCE_DIR}x" STREQUAL "x")
+  # cpr doesn't include its own export set, if we are building it, add it to ours
+  install(TARGETS cpr
+          EXPORT NUISANCEHEPData-targets)
+endif()
 
 CPMFindPackage(
     NAME yaml-cpp
