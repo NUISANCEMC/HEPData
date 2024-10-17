@@ -46,6 +46,4 @@ struct ResourceReference {
 // ref format: /path/to/file.yaml[:<resource[:qualifier]>]
 ResourceReference PathResourceReference(std::string const &refstr);
 
-extern ResourceReference const HEPDataRef;
-
 } // namespace nuis::HEPData

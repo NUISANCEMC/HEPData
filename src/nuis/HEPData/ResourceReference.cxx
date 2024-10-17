@@ -18,8 +18,6 @@ spdlog::logger &ref_log() {
   return *ref_logger;
 }
 
-ResourceReference const HEPDataRef{"hepdata:/"};
-
 // ref format: [<type=hepdata>:][<id>][[/]<resource[:<qualifier>]>]
 ResourceReference::ResourceReference(std::string const &ref,
                                      ResourceReference const &context) {
