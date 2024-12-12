@@ -1,6 +1,6 @@
 #include "nuis/HEPData/StreamHelpers.h"
 
-#include "spdlog/fmt/bundled/core.h"
+#include "spdlog/fmt/fmt.h"
 
 #include <iostream>
 

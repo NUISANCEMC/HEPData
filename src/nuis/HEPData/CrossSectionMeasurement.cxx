@@ -1,6 +1,6 @@
 #include "nuis/HEPData/CrossSectionMeasurement.h"
 
-#include "spdlog/fmt/bundled/core.h"
+#include "spdlog/fmt/fmt.h"
 
 namespace nuis::HEPData {
 

@@ -5,8 +5,8 @@
 
 #include "yaml-cpp/yaml.h"
 
-#include "spdlog/fmt/bundled/core.h"
-#include "spdlog/fmt/bundled/ranges.h"
+#include "spdlog/fmt/fmt.h"
+#include "spdlog/fmt/ranges.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/spdlog.h"
 

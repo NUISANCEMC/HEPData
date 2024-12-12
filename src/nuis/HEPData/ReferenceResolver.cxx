@@ -1,10 +1,10 @@
 #include "nuis/HEPData/ReferenceResolver.h"
 
-#include "cpr/cpr.h"
+// #include "cpr/cpr.h"
 
 #include "yaml-cpp/yaml.h"
 
-#include "spdlog/fmt/bundled/core.h"
+#include "spdlog/fmt/fmt.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/spdlog.h"
 
@@ -21,6 +21,19 @@ spdlog::logger &refresolv_log() {
     refresolv_logger->set_pattern("[NHPD RefResolv:%L]: %v");
   }
   return *refresolv_logger;
+}
+
+std::string exec(const std::string& cmd) {
+    std::array<char, 4096> buffer;
+    std::string result;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd.c_str(), "r"), pclose);
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+        result += buffer.data();
+    }
+    return result;
 }
 
 std::filesystem::path
@@ -58,9 +71,8 @@ get_expected_resource_location(ResourceReference const &ref,
   return expected_location;
 }
 
-cpr::Url get_record_endpoint(ResourceReference const &ref) {
-  cpr::Url Endpoint{"https://www.hepdata.net/record/"};
-
+std::string get_normal_record_endpoint(ResourceReference const &ref) {
+  std::string Endpoint = "https://www.hepdata.net/record/";
   if (ref.reftype == "hepdata") {
     Endpoint += fmt::format("{}", ref.recordid);
   } else if (ref.reftype == "hepdata-sandbox") {
@@ -68,9 +80,23 @@ cpr::Url get_record_endpoint(ResourceReference const &ref) {
   } else if (ref.reftype == "inspirehep") {
     Endpoint += fmt::format("ins{}", ref.recordid);
   }
-
   return Endpoint;
 }
+
+// PS : Suggest removing CPR
+// cpr::Url get_record_endpoint(ResourceReference const &ref) {
+//   cpr::Url Endpoint{"https://www.hepdata.net/record/"};
+
+//   if (ref.reftype == "hepdata") {
+//     Endpoint += fmt::format("{}", ref.recordid);
+//   } else if (ref.reftype == "hepdata-sandbox") {
+//     Endpoint += fmt::format("sandbox/{}", ref.recordid);
+//   } else if (ref.reftype == "inspirehep") {
+//     Endpoint += fmt::format("ins{}", ref.recordid);
+//   }
+
+//   return Endpoint;
+// }
 
 std::filesystem::path
 ensure_local_path(ResourceReference const &ref,
@@ -137,6 +163,9 @@ ensure_local_path(ResourceReference const &ref,
 
   std::ofstream of(download_location, std::ios::binary);
 
+/* PS 12/12/24 Suggest just calling curl using std::system
+   as below to avoid a whole library for 10 lines of code.
+   
   cpr::Url Endpoint = get_record_endpoint(ref);
 
   refresolv_log().debug("   * No local copy of the record found");
@@ -164,7 +193,32 @@ ensure_local_path(ResourceReference const &ref,
   if (refresolv_log().level() <= spdlog::level::debug) {
     redir = "";
   }
+*/
+  std::string redir = "&>/dev/null";
+  if (refresolv_log().level() <= spdlog::level::debug) {
+    redir = "";
+  }
+    
+  std::string Endpoint = get_normal_record_endpoint(ref);
 
+  refresolv_log().debug("   * No local copy of the record found");
+  refresolv_log().debug("     * Try to fetch remote reference:");
+  refresolv_log().debug("       * GET {} -> {} ", Endpoint,
+                        download_location.native());
+
+  auto curlget_command = fmt::format("curl -L -X GET -o {} -G  \"{}\" -d \"format=original\" {}", 
+    download_location.c_str(), 
+    Endpoint,
+    redir);    
+    
+    std::cout << "CURLGET COMMAND " << curlget_command << std::endl;
+    
+  auto errc_download = std::system(curlget_command.c_str());
+  if (errc_download) {
+    throw std::runtime_error(
+        fmt::format("curl get command reported error: {}", errc_download));
+  }
+    
   auto unzip_command = fmt::format("cd {} && unzip submission.zip {}",
                                    record_location.native(), redir);
 
@@ -210,30 +264,49 @@ ResourceReference resolve_version(ResourceReference ref) {
     return ref;
   }
 
+  std::string redir = "&>/dev/null";
+  if (refresolv_log().level() <= spdlog::level::debug) {
+    redir = "";
+  }
+
   if (!ref.recordvers) { // unqualified version, check what the latest version
                          // is
-    cpr::Url Endpoint = get_record_endpoint(ref);
+    // cpr::Url Endpoint = get_record_endpoint(ref);
+    std::string Endpoint = get_normal_record_endpoint(ref);
 
-    refresolv_log().debug(
-        "    * Checking latest version for unversioned ref={}", ref.str());
-    refresolv_log().debug("      * GET {}", Endpoint.str());
+    // refresolv_log().debug(
+    //     "    * Checking latest version for unversioned ref={}", ref.str());
+    // refresolv_log().debug("      * GET {}", Endpoint.str());
 
-    cpr::Response r = cpr::Get(Endpoint, cpr::Parameters{{"format", "json"}});
+    // cpr::Response r = cpr::Get(Endpoint, cpr::Parameters{{"format", "json"}});
 
-    refresolv_log().debug("      * http response --> {} ", r.status_code);
+    // refresolv_log().debug("      * http response --> {} ", r.status_code);
 
-    if (r.status_code != 200) {
+    // if (r.status_code != 200) {
+    //   throw std::runtime_error(
+    //       fmt::format("GET response code: {}", r.status_code));
+    // }
+
+    // if (r.header["content-type"] != "application/json") {
+    //   throw std::runtime_error(fmt::format(
+    //       "GET response content-type: {}, expected \"application/json\"",
+    //       r.header["content-type"]));
+    // }
+
+      // curl -L -X GET -G  "https://www.hepdata.net/record/ins1804293" -d "format=json"
+          
+    auto curlres_command = fmt::format("curl -L -X GET -G  \"{}\" -d \"format=json\" {}", Endpoint, "");   
+    std::cout << "CURLRES COMMAND " << curlres_command << std::endl;
+      
+    auto errc_res = std::system(curlres_command.c_str());
+    if (errc_res) {
       throw std::runtime_error(
-          fmt::format("GET response code: {}", r.status_code));
+         fmt::format("curl resolve command reported error: {}", errc_res));
     }
 
-    if (r.header["content-type"] != "application/json") {
-      throw std::runtime_error(fmt::format(
-          "GET response content-type: {}, expected \"application/json\"",
-          r.header["content-type"]));
-    }
-
-    auto respdoc = YAML::Load(r.text);
+    std::string res = exec(curlres_command);
+    std::cout << "RESPONSE" << res << std::endl;
+    auto respdoc = YAML::Load(res);
 
     ref.recordvers = respdoc["version"].as<int>();
     refresolv_log().debug(
