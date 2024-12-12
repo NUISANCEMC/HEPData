@@ -210,9 +210,7 @@ ensure_local_path(ResourceReference const &ref,
     download_location.c_str(), 
     Endpoint,
     redir);    
-    
-    std::cout << "CURLGET COMMAND " << curlget_command << std::endl;
-    
+        
   auto errc_download = std::system(curlget_command.c_str());
   if (errc_download) {
     throw std::runtime_error(
@@ -292,12 +290,8 @@ ResourceReference resolve_version(ResourceReference ref) {
     //       "GET response content-type: {}, expected \"application/json\"",
     //       r.header["content-type"]));
     // }
-
-      // curl -L -X GET -G  "https://www.hepdata.net/record/ins1804293" -d "format=json"
           
     auto curlres_command = fmt::format("curl -L -X GET -G  \"{}\" -d \"format=json\" {}", Endpoint, "");   
-    std::cout << "CURLRES COMMAND " << curlres_command << std::endl;
-      
     auto errc_res = std::system(curlres_command.c_str());
     if (errc_res) {
       throw std::runtime_error(
@@ -305,7 +299,6 @@ ResourceReference resolve_version(ResourceReference ref) {
     }
 
     std::string res = exec(curlres_command);
-    std::cout << "RESPONSE" << res << std::endl;
     auto respdoc = YAML::Load(res);
 
     ref.recordvers = respdoc["version"].as<int>();
