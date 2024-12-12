@@ -99,60 +99,73 @@ add_library(NUISANCEHEPData::Options ALIAS nuishpd_options)
 
 include(get_cpm)
 
-set(NUISANCEHEPData_CPR_USE_SYSTEM_CURL ON)
-find_package(CURL QUIET)
-if(NOT CURL_FOUND)
-  set(NUISANCEHEPData_CPR_USE_SYSTEM_CURL OFF)
-endif()
+# PS Suggest not using CPR just for two calls
+#set(NUISANCEHEPData_CPR_USE_SYSTEM_CURL ON)
+#find_package(CURL QUIET)
+#if(NOT CURL_FOUND)
+#  set(NUISANCEHEPData_CPR_USE_SYSTEM_CURL OFF)
+#endif()
 
-CPMFindPackage(
-    NAME cpr
-    VERSION 1.10.4
-    GITHUB_REPOSITORY libcpr/cpr
-    GIT_TAG "1.10.4"
-    OPTIONS "CPR_USE_SYSTEM_CURL ${NUISANCEHEPData_CPR_USE_SYSTEM_CURL}"
-)
+#CPMFindPackage(
+#    NAME cpr
+#    VERSION 1.10.4
+#    GITHUB_REPOSITORY libcpr/cpr
+#    GIT_TAG "1.10.4"
+#    OPTIONS "CPR_USE_SYSTEM_CURL ${NUISANCEHEPData_CPR_USE_SYSTEM_CURL}"
+#)
 
-if(NOT "${cpr_SOURCE_DIR}x" STREQUAL "x")
-  # cpr doesn't include its own export set, if we are building it, add it to ours
-  install(TARGETS cpr
-          EXPORT NUISANCEHEPData-targets)
+#if(NOT "${cpr_SOURCE_DIR}x" STREQUAL "x")
+#  # cpr doesn't include its own export set, if we are building it, add it to ours
+#  install(TARGETS cpr
+#          EXPORT NUISANCEHEPData-targets)
+#else()
+#  if(NOT TARGET CURL::libcurl_shared)
+#    get_target_property(LIBCURLLOC CURL::libcurl IMPORTED_LOCATION)
+#    #hack in an alias because we found a shared library
+#    get_filename_component(LIBCURLEXT ${LIBCURLLOC} EXT)
+#    if("${LIBCURLEXT}" STREQUAL ".so")
+#      add_library(CURL::libcurl_shared ALIAS CURL::libcurl)
+#    endif()
+#  endif()
+#
+#  if(NOT TARGET CURL::libcurl_shared)
+#    message(FATAL_ERROR "Failed to find libcurl_shared")
+#  endif()
+#endif()
+
+
+
+find_package(yaml-cpp)
+if (TARGET yaml-cpp AND NOT TARGET yaml-cpp::yaml-cpp)
+    add_library(yaml-cpp::yaml-cpp ALIAS yaml-cpp)
 else()
-  if(NOT TARGET CURL::libcurl_shared)
-    get_target_property(LIBCURLLOC CURL::libcurl IMPORTED_LOCATION)
-    #hack in an alias because we found a shared library
-    get_filename_component(LIBCURLEXT ${LIBCURLLOC} EXT)
-    if("${LIBCURLEXT}" STREQUAL ".so")
-      add_library(CURL::libcurl_shared ALIAS CURL::libcurl)
-    endif()
-  endif()
-
-  if(NOT TARGET CURL::libcurl_shared)
-    message(FATAL_ERROR "Failed to find libcurl_shared")
-  endif()
+    CPMFindPackage(
+        NAME yaml-cpp
+        VERSION 0.8.0
+        GITHUB_REPOSITORY "jbeder/yaml-cpp"
+        GIT_TAG "0.8.0"
+        OPTIONS "YAML_CPP_INSTALL ON"
+                "YAML_CPP_BUILD_TESTS OFF"
+                "YAML_CPP_BUILD_CONTRIB OFF"
+                "YAML_BUILD_SHARED_LIBS ON"
+    )
 endif()
 
-CPMFindPackage(
-    NAME yaml-cpp
-    VERSION 0.8.0
-    GITHUB_REPOSITORY "jbeder/yaml-cpp"
-    GIT_TAG "0.8.0"
-    OPTIONS "YAML_CPP_INSTALL ON"
-            "YAML_CPP_BUILD_TESTS OFF"
-            "YAML_CPP_BUILD_CONTRIB OFF"
-            "YAML_BUILD_SHARED_LIBS ON"
-)
 
-CPMFindPackage(
-    NAME spdlog
-    VERSION 1.14.1
-    GIT_TAG v1.14.1
-    GITHUB_REPOSITORY gabime/spdlog
-    OPTIONS 
-        "SPDLOG_COMPILED_LIB ON"
-        "SPDLOG_BUILD_SHARED ON"
-        "SPDLOG_INSTALL ON"
-)
+find_package(spdlog REQUIRED)
+if (NOT TARGET spdlog::spdlog)
+    CPMFindPackage(
+        NAME spdlog
+        VERSION 1.14.1
+        GIT_TAG v1.14.1
+        GITHUB_REPOSITORY gabime/spdlog
+        OPTIONS 
+            "SPDLOG_COMPILED_LIB ON"
+            "SPDLOG_BUILD_SHARED ON"
+            "SPDLOG_INSTALL ON"
+    )
+endif()
+
 
 CPMAddPackage(
     NAME docopt
