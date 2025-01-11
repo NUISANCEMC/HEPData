@@ -4,7 +4,7 @@
 
 #include "yaml-cpp/yaml.h"
 
-#include "spdlog/fmt/bundled/core.h"
+#include "fmt/core.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include "spdlog/spdlog.h"
 

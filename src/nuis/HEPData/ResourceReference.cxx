@@ -1,6 +1,6 @@
 #include "nuis/HEPData/ResourceReference.h"
 
-#include "spdlog/fmt/bundled/core.h"
+#include "fmt/core.h"
 #include "spdlog/spdlog.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 
