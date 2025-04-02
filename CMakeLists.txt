@@ -143,7 +143,16 @@ CPMFindPackage(
             "YAML_BUILD_SHARED_LIBS ON"
 )
 
-CPMFindPackage(
+CPMAddPackage(
+    NAME fmt
+    VERSION 10.2.1
+    GIT_TAG 10.2.1
+    GITHUB_REPOSITORY fmtlib/fmt
+    OPTIONS 
+        "FMT_INSTALL ON"
+)
+
+CPMAddPackage(
     NAME spdlog
     VERSION 1.14.1
     GIT_TAG v1.14.1
@@ -151,6 +160,7 @@ CPMFindPackage(
     OPTIONS 
         "SPDLOG_COMPILED_LIB ON"
         "SPDLOG_BUILD_SHARED ON"
+        "SPDLOG_FMT_EXTERNAL ON"
         "SPDLOG_INSTALL ON"
 )
 
@@ -208,19 +218,3 @@ install(FILES
     ${CMAKE_BINARY_DIR}/NUISANCEHEPDataConfig.cmake 
     ${CMAKE_BINARY_DIR}/NUISANCEHEPDataConfigVersion.cmake 
   DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/NUISANCEHEPData)
-
-# if(NUISANCEHEPData_ENABLE_TESTS)
-
-#   CPMFindPackage(
-#       NAME Catch2
-#       GITHUB_REPOSITORY catchorg/Catch2
-#       VERSION 3.3.2
-#   )
-
-#   LIST(APPEND CMAKE_MODULE_PATH ${Catch2_SOURCE_DIR}/extras)
-
-#   include(CTest)
-#   include(Catch)
-
-#   add_subdirectory(tests)
-# endif()
