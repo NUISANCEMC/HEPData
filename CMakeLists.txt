@@ -105,7 +105,7 @@ if(NOT CURL_FOUND)
   set(NUISANCEHEPData_CPR_USE_SYSTEM_CURL OFF)
 endif()
 
-CPMFindPackage(
+CPMAddPackage(
     NAME cpr
     VERSION 1.10.4
     GITHUB_REPOSITORY libcpr/cpr
@@ -143,26 +143,40 @@ CPMFindPackage(
             "YAML_BUILD_SHARED_LIBS ON"
 )
 
-CPMAddPackage(
-    NAME fmt
-    VERSION 10.2.1
-    GIT_TAG 10.2.1
-    GITHUB_REPOSITORY fmtlib/fmt
-    OPTIONS 
-        "FMT_INSTALL ON"
-)
+set(NUISANCEHEPData_FMT_VERSION "10.2.1")
+set(NUISANCEHEPData_FMT_VERSION_RANGE "10...<11")
+find_package(fmt ${NUISANCEHEPData_FMT_VERSION_RANGE} QUIET NO_DEFAULT_PATH)
 
-CPMAddPackage(
-    NAME spdlog
-    VERSION 1.14.1
-    GIT_TAG v1.14.1
-    GITHUB_REPOSITORY gabime/spdlog
-    OPTIONS 
-        "SPDLOG_COMPILED_LIB ON"
-        "SPDLOG_BUILD_SHARED ON"
-        "SPDLOG_FMT_EXTERNAL ON"
-        "SPDLOG_INSTALL ON"
-)
+set(NUISANCEHEPData_SPDLOG_VERSION "1.14.1")
+set(NUISANCEHEPData_SPDLOG_VERSION_RANGE "1.14...<1.15")
+find_package(spdlog ${NUISANCEHEPData_SPDLOG_VERSION_RANGE} QUIET NO_DEFAULT_PATH)
+
+if(NOT spdlog_FOUND OR NOT fmt_FOUND)
+  CPMAddPackage(
+      NAME fmt
+      VERSION "${NUISANCEHEPData_FMT_VERSION}"
+      GIT_TAG "${NUISANCEHEPData_FMT_VERSION}"
+      GITHUB_REPOSITORY fmtlib/fmt
+      OPTIONS 
+          "FMT_INSTALL ON"
+          "BUILD_SHARED_LIBS ON"
+  )
+
+  CPMAddPackage(
+      NAME spdlog
+      VERSION "${NUISANCEHEPData_SPDLOG_VERSION}"
+      GIT_TAG "v${NUISANCEHEPData_SPDLOG_VERSION}"
+      GITHUB_REPOSITORY gabime/spdlog
+      OPTIONS 
+          "SPDLOG_COMPILED_LIB ON"
+          "SPDLOG_BUILD_SHARED ON"
+          "SPDLOG_FMT_EXTERNAL ON"
+          "SPDLOG_INSTALL ON"
+  )
+else()
+  message(STATUS "Found system fmt: ${fmt_DIR}")
+  message(STATUS "Found system spdlog: ${spdlog_DIR}")
+endif()
 
 CPMAddPackage(
     NAME docopt
